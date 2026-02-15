@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../connector/meshcore_connector.dart';
 import '../l10n/l10n.dart';
+import '../models/community_radio_presets.dart';
 import '../services/app_settings_service.dart';
 import '../services/notification_service.dart';
 import 'map_cache_screen.dart';
@@ -29,6 +30,8 @@ class AppSettingsScreen extends StatelessWidget {
                 _buildNotificationsCard(context, settingsService),
                 const SizedBox(height: 16),
                 _buildMessagingCard(context, settingsService),
+                const SizedBox(height: 16),
+                _buildRadioDefaultsCard(context, settingsService),
                 const SizedBox(height: 16),
                 _buildRoomSyncCard(context, settingsService),
                 const SizedBox(height: 16),
@@ -298,6 +301,18 @@ class AppSettingsScreen extends StatelessWidget {
               );
             },
           ),
+          const Divider(height: 1),
+          SwitchListTile(
+            secondary: const Icon(Icons.view_agenda_outlined),
+            title: const Text('Compact contacts view'),
+            subtitle: const Text(
+              'Hide routing type and hardware address in contacts list.',
+            ),
+            value: settingsService.settings.contactsCompactView,
+            onChanged: (value) {
+              settingsService.setContactsCompactView(value);
+            },
+          ),
         ],
       ),
     );
@@ -380,6 +395,65 @@ class AppSettingsScreen extends StatelessWidget {
                 MaterialPageRoute(builder: (context) => const MapCacheScreen()),
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRadioDefaultsCard(
+    BuildContext context,
+    AppSettingsService settingsService,
+  ) {
+    final selectedProfile = settingsService.settings.defaultRadioProfile;
+    final safeProfile = CommunityRadioPreset.isKnownProfile(selectedProfile)
+        ? selectedProfile
+        : CommunityRadioPreset.regionAutoProfile;
+
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Radio Defaults',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.radio_outlined),
+            title: const Text('Default radio preset'),
+            subtitle: Text(_radioProfileLabel(safeProfile)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: DropdownButtonFormField<String>(
+              initialValue: safeProfile,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                border: UnderlineInputBorder(),
+                helperText:
+                    'Used when the node has no radio values yet (region auto uses device locale).',
+              ),
+              items: [
+                const DropdownMenuItem(
+                  value: CommunityRadioPreset.regionAutoProfile,
+                  child: Text('Auto by region'),
+                ),
+                ...CommunityRadioPreset.all.map(
+                  (preset) => DropdownMenuItem(
+                    value: preset.profileValue,
+                    child: Text(preset.name),
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  settingsService.setDefaultRadioProfile(value);
+                }
+              },
+            ),
           ),
         ],
       ),
@@ -670,6 +744,15 @@ class AppSettingsScreen extends StatelessWidget {
       default:
         return context.l10n.appSettings_languageSystem;
     }
+  }
+
+  String _radioProfileLabel(String profile) {
+    if (profile == CommunityRadioPreset.regionAutoProfile) {
+      return 'Auto by region';
+    }
+    final preset = CommunityRadioPreset.fromProfile(profile);
+    if (preset != null) return preset.name;
+    return 'Auto by region';
   }
 
   void _showLanguageDialog(

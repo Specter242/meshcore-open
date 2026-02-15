@@ -27,6 +27,8 @@ class AppSettings {
   final int roomSyncMaxIntervalSeconds;
   final int roomSyncTimeoutSeconds;
   final int roomSyncStaleMinutes;
+  final String defaultRadioProfile;
+  final bool contactsCompactView;
 
   AppSettings({
     this.clearPathOnMaxRetry = false,
@@ -55,6 +57,8 @@ class AppSettings {
     this.roomSyncMaxIntervalSeconds = 600,
     this.roomSyncTimeoutSeconds = 15,
     this.roomSyncStaleMinutes = 15,
+    this.defaultRadioProfile = 'region_auto',
+    this.contactsCompactView = false,
   }) : batteryChemistryByDeviceId = batteryChemistryByDeviceId ?? {};
 
   Map<String, dynamic> toJson() {
@@ -85,6 +89,8 @@ class AppSettings {
       'room_sync_max_interval_seconds': roomSyncMaxIntervalSeconds,
       'room_sync_timeout_seconds': roomSyncTimeoutSeconds,
       'room_sync_stale_minutes': roomSyncStaleMinutes,
+      'default_radio_profile': defaultRadioProfile,
+      'contacts_compact_view': contactsCompactView,
     };
   }
 
@@ -127,6 +133,9 @@ class AppSettings {
           json['room_sync_max_interval_seconds'] as int? ?? 600,
       roomSyncTimeoutSeconds: json['room_sync_timeout_seconds'] as int? ?? 15,
       roomSyncStaleMinutes: json['room_sync_stale_minutes'] as int? ?? 15,
+      defaultRadioProfile:
+          json['default_radio_profile'] as String? ?? 'region_auto',
+      contactsCompactView: json['contacts_compact_view'] as bool? ?? false,
     );
   }
 
@@ -157,6 +166,8 @@ class AppSettings {
     int? roomSyncMaxIntervalSeconds,
     int? roomSyncTimeoutSeconds,
     int? roomSyncStaleMinutes,
+    String? defaultRadioProfile,
+    bool? contactsCompactView,
   }) {
     return AppSettings(
       clearPathOnMaxRetry: clearPathOnMaxRetry ?? this.clearPathOnMaxRetry,
@@ -196,6 +207,8 @@ class AppSettings {
       roomSyncTimeoutSeconds:
           roomSyncTimeoutSeconds ?? this.roomSyncTimeoutSeconds,
       roomSyncStaleMinutes: roomSyncStaleMinutes ?? this.roomSyncStaleMinutes,
+      defaultRadioProfile: defaultRadioProfile ?? this.defaultRadioProfile,
+      contactsCompactView: contactsCompactView ?? this.contactsCompactView,
     );
   }
 }

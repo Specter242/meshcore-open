@@ -158,4 +158,12 @@ class AppSettingsService extends ChangeNotifier {
   Future<void> setRoomSyncStaleMinutes(int minutes) async {
     await updateSettings(_settings.copyWith(roomSyncStaleMinutes: minutes));
   }
+
+  Future<void> setDefaultRadioProfile(String value) async {
+    await updateSettings(_settings.copyWith(defaultRadioProfile: value));
+  }
+
+  Future<void> setContactsCompactView(bool value) async {
+    await updateSettings(_settings.copyWith(contactsCompactView: value));
+  }
 }

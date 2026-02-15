@@ -1,0 +1,23 @@
+---
+description: Always install latest build to connected Android phone
+alwaysApply: true
+---
+
+# Android Phone Deploy Rule
+
+When deploying this app to my phone, always update the installed app with the newest build.
+
+- Do not stop at "run only" behavior.
+- Prefer install-first deployment so the device has the latest APK installed.
+- Use `flutter install` for phone deployment.
+- If needed, build first, then install the resulting APK.
+
+Preferred commands:
+
+```bash
+~/flutter/bin/flutter pub get
+~/flutter/bin/flutter build apk --debug
+~/flutter/bin/flutter install
+```
+
+If app launch is requested separately, run it after install.

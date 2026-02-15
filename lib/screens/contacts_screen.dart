@@ -24,6 +24,7 @@ import '../widgets/repeater_login_dialog.dart';
 import '../widgets/room_login_dialog.dart';
 import '../widgets/unread_badge.dart';
 import '../services/room_sync_service.dart';
+import '../services/app_settings_service.dart';
 import 'channels_screen.dart';
 import 'chat_screen.dart';
 import 'map_screen.dart';
@@ -372,6 +373,7 @@ class _ContactsScreenState extends State<ContactsScreen>
 
   Widget _buildContactsBody(BuildContext context, MeshCoreConnector connector) {
     final contacts = connector.contacts;
+    final appSettings = context.watch<AppSettingsService>().settings;
     final hasRoomServers = contacts.any((c) => c.type == advTypeRoom);
 
     if (contacts.isEmpty && connector.isLoadingContacts && _groups.isEmpty) {
@@ -476,6 +478,7 @@ class _ContactsScreenState extends State<ContactsScreen>
                         lastSeen: _resolveLastSeen(contact),
                         unreadCount: unreadCount,
                         isFavorite: contact.isFavorite,
+                        compactView: appSettings.contactsCompactView,
                         onTap: () => _openChat(context, contact),
                         onLongPress: () =>
                             _showContactOptions(context, connector, contact),
@@ -1234,6 +1237,7 @@ class _ContactTile extends StatelessWidget {
   final DateTime lastSeen;
   final int unreadCount;
   final bool isFavorite;
+  final bool compactView;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
@@ -1242,6 +1246,7 @@ class _ContactTile extends StatelessWidget {
     required this.lastSeen,
     required this.unreadCount,
     required this.isFavorite,
+    required this.compactView,
     required this.onTap,
     required this.onLongPress,
   });
@@ -1261,24 +1266,25 @@ class _ContactTile extends StatelessWidget {
       return Colors.orange[700];
     })();
 
+    final subtitleLines = <Widget>[
+      if (!compactView) Text(contact.pathLabel),
+      if (roomStatus != null)
+        Text(roomStatus, style: TextStyle(fontSize: 12, color: roomStatusColor)),
+      if (!compactView) Text(contact.shortPubKeyHex, style: TextStyle(fontSize: 12)),
+    ];
+
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: _getTypeColor(contact.type),
         child: _buildContactAvatar(contact),
       ),
       title: Text(contact.name),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(contact.pathLabel),
-          if (roomStatus != null)
-            Text(
-              roomStatus,
-              style: TextStyle(fontSize: 12, color: roomStatusColor),
+      subtitle: subtitleLines.isEmpty
+          ? null
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: subtitleLines,
             ),
-          Text(contact.shortPubKeyHex, style: TextStyle(fontSize: 12)),
-        ],
-      ),
       // Clamp text scaling in trailing section to prevent overflow while
       // maintaining accessibility. Primary content (title/subtitle) scales normally.
       trailing: MediaQuery(

@@ -7,7 +7,9 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../connector/meshcore_connector.dart';
 import '../connector/meshcore_protocol.dart';
 import '../l10n/l10n.dart';
+import '../models/community_radio_presets.dart';
 import '../models/radio_settings.dart';
+import '../services/app_settings_service.dart';
 import 'app_settings_screen.dart';
 import 'app_debug_log_screen.dart';
 import 'ble_debug_log_screen.dart';
@@ -872,7 +874,17 @@ class _RadioSettingsDialogState extends State<_RadioSettingsDialog> {
       _frequencyController.text = (widget.connector.currentFreqHz! / 1000.0)
           .toStringAsFixed(3);
     } else {
-      _frequencyController.text = '915.0';
+      final settingsService = context.read<AppSettingsService>();
+      final locale =
+          Localizations.maybeLocaleOf(context) ??
+          WidgetsBinding.instance.platformDispatcher.locale;
+      final profile = settingsService.settings.defaultRadioProfile;
+      final preset = CommunityRadioPreset.resolveProfileSettings(
+        profile,
+        countryCode: locale.countryCode,
+        languageCode: locale.languageCode,
+      );
+      _applyPreset(preset);
     }
 
     if (widget.connector.currentBwHz != null) {
@@ -928,6 +940,27 @@ class _RadioSettingsDialogState extends State<_RadioSettingsDialog> {
       _codingRate = preset.codingRate;
       _txPowerController.text = preset.txPowerDbm.toString();
     });
+  }
+
+  String _describePreset(CommunityRadioPreset preset) {
+    final bwKHz = preset.settings.bandwidth.hz / 1000;
+    final bwLabel = bwKHz.toStringAsFixed(
+      bwKHz.truncateToDouble() == bwKHz ? 0 : 1,
+    );
+    return '${preset.settings.frequencyMHz.toStringAsFixed(3)}MHz / SF${preset.settings.spreadingFactor.value} / BW$bwLabel / CR${preset.settings.codingRate.value}';
+  }
+
+  Future<void> _showCommunityPresetDialog() async {
+    final selected = await showDialog<CommunityRadioPreset>(
+      context: context,
+      builder: (context) => _NodeCommunityPresetDialog(
+        presets: CommunityRadioPreset.all,
+        describePreset: _describePreset,
+      ),
+    );
+    if (selected != null) {
+      _applyPreset(selected.settings);
+    }
   }
 
   Future<void> _saveSettings() async {
@@ -1006,28 +1039,11 @@ class _RadioSettingsDialogState extends State<_RadioSettingsDialog> {
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
+            Row(
               children: [
-                _PresetChip(
-                  label: l10n.settings_preset915Mhz,
-                  onTap: () => _applyPreset(RadioSettings.preset915MHz),
-                ),
-                _PresetChip(
-                  label: l10n.settings_preset868Mhz,
-                  onTap: () => _applyPreset(RadioSettings.preset868MHz),
-                ),
-                _PresetChip(
-                  label: l10n.settings_preset433Mhz,
-                  onTap: () => _applyPreset(RadioSettings.preset433MHz),
-                ),
-                _PresetChip(
-                  label: l10n.settings_longRange,
-                  onTap: () => _applyPreset(RadioSettings.presetLongRange),
-                ),
-                _PresetChip(
-                  label: l10n.settings_fastSpeed,
-                  onTap: () => _applyPreset(RadioSettings.presetFastSpeed),
+                OutlinedButton(
+                  onPressed: _showCommunityPresetDialog,
+                  child: const Text('Choose Preset'),
                 ),
               ],
             ),
@@ -1117,14 +1133,90 @@ class _RadioSettingsDialogState extends State<_RadioSettingsDialog> {
   }
 }
 
-class _PresetChip extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
+class _NodeCommunityPresetDialog extends StatefulWidget {
+  final List<CommunityRadioPreset> presets;
+  final String Function(CommunityRadioPreset preset) describePreset;
 
-  const _PresetChip({required this.label, required this.onTap});
+  const _NodeCommunityPresetDialog({
+    required this.presets,
+    required this.describePreset,
+  });
+
+  @override
+  State<_NodeCommunityPresetDialog> createState() =>
+      _NodeCommunityPresetDialogState();
+}
+
+class _NodeCommunityPresetDialogState
+    extends State<_NodeCommunityPresetDialog> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ActionChip(label: Text(label), onPressed: onTap);
+    final query = _searchController.text.trim().toLowerCase();
+    final filtered = widget.presets.where((preset) {
+      if (query.isEmpty) return true;
+      final haystack = '${preset.name} ${widget.describePreset(preset)}'
+          .toLowerCase();
+      return haystack.contains(query);
+    }).toList();
+
+    return AlertDialog(
+      title: const Text('Select Radio Settings'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'These presets are suggested by the community.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                hintText: 'Search',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.search),
+                isDense: true,
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  final preset = filtered[index];
+                  return ListTile(
+                    dense: true,
+                    title: Text(preset.name),
+                    subtitle: Text(widget.describePreset(preset)),
+                    onTap: () => Navigator.pop(context, preset),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(context.l10n.common_cancel),
+        ),
+      ],
+    );
   }
 }
