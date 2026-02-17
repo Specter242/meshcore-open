@@ -485,52 +485,6 @@ class _ContactsScreenState extends State<ContactsScreen>
     );
   }
 
-  Widget _buildRoomSyncLegend(BuildContext context) {
-    final textColor = Theme.of(context).colorScheme.onSurfaceVariant;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 8,
-        children: [
-          _RoomSyncLegendItem(
-            icon: Icons.check_circle_outline,
-            label: context.l10n.roomSync_statusConnectedSynced,
-            color: Colors.green[700]!,
-            textColor: textColor,
-          ),
-          _RoomSyncLegendItem(
-            icon: Icons.sync,
-            label: context.l10n.roomSync_statusSyncing,
-            color: Colors.blue[700]!,
-            textColor: textColor,
-          ),
-          _RoomSyncLegendItem(
-            icon: Icons.warning_amber_outlined,
-            label: context.l10n.roomSync_statusConnectedStale,
-            color: Colors.orange[700]!,
-            textColor: textColor,
-          ),
-          _RoomSyncLegendItem(
-            icon: Icons.sync_disabled,
-            label: context.l10n.roomSync_statusDisabled,
-            color: Colors.grey[700]!,
-            textColor: textColor,
-          ),
-          _RoomSyncLegendItem(
-            icon: Icons.link_off,
-            label: context.l10n.roomSync_statusNotLoggedIn,
-            color: Colors.grey[700]!,
-            textColor: textColor,
-          ),
-        ],
-      ),
-    );
-  }
   List<ContactGroup> _filterAndSortGroups(
     List<ContactGroup> groups,
     List<Contact> contacts,
@@ -1273,7 +1227,8 @@ class _ContactTile extends StatelessWidget {
           roomStatusLabel,
           style: TextStyle(fontSize: 12, color: roomStatusColor),
         ),
-      if (!compactView) Text(contact.shortPubKeyHex, style: TextStyle(fontSize: 12)),
+      if (!compactView)
+        Text(contact.shortPubKeyHex, style: TextStyle(fontSize: 12)),
     ];
 
     return ListTile(
