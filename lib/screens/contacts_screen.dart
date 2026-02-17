@@ -485,6 +485,52 @@ class _ContactsScreenState extends State<ContactsScreen>
     );
   }
 
+  Widget _buildRoomSyncLegend(BuildContext context) {
+    final textColor = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 8,
+        children: [
+          _RoomSyncLegendItem(
+            icon: Icons.check_circle_outline,
+            label: context.l10n.roomSync_statusConnectedSynced,
+            color: Colors.green[700]!,
+            textColor: textColor,
+          ),
+          _RoomSyncLegendItem(
+            icon: Icons.sync,
+            label: context.l10n.roomSync_statusSyncing,
+            color: Colors.blue[700]!,
+            textColor: textColor,
+          ),
+          _RoomSyncLegendItem(
+            icon: Icons.warning_amber_outlined,
+            label: context.l10n.roomSync_statusConnectedStale,
+            color: Colors.orange[700]!,
+            textColor: textColor,
+          ),
+          _RoomSyncLegendItem(
+            icon: Icons.sync_disabled,
+            label: context.l10n.roomSync_statusDisabled,
+            color: Colors.grey[700]!,
+            textColor: textColor,
+          ),
+          _RoomSyncLegendItem(
+            icon: Icons.link_off,
+            label: context.l10n.roomSync_statusNotLoggedIn,
+            color: Colors.grey[700]!,
+            textColor: textColor,
+          ),
+        ],
+      ),
+    );
+  }
   List<ContactGroup> _filterAndSortGroups(
     List<ContactGroup> groups,
     List<Contact> contacts,
@@ -1043,10 +1089,8 @@ class _ContactsScreenState extends State<ContactsScreen>
               ),
               SwitchListTile(
                 secondary: const Icon(Icons.sync),
-                title: const Text('Auto-sync this room'),
-                subtitle: const Text(
-                  'Enable automatic login and background catch-up sync for this room.',
-                ),
+                title: Text(context.l10n.contacts_roomAutoSyncTitle),
+                subtitle: Text(context.l10n.contacts_roomAutoSyncSubtitle),
                 value: roomSyncService.isRoomAutoSyncEnabled(
                   contact.publicKeyHex,
                 ),
@@ -1202,24 +1246,33 @@ class _ContactTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final roomSync = context.watch<RoomSyncService>();
     final roomStatus = contact.type == advTypeRoom
-        ? roomSync.roomStatusLabel(contact.publicKeyHex)
+        ? roomSync.roomStatus(contact.publicKeyHex)
         : null;
-    final roomStatusColor = contact.type != advTypeRoom
-        ? Colors.grey[600]
-        : switch (roomSync.roomStatusKind(contact.publicKeyHex)) {
-            RoomSyncStatusKind.connectedSynced => Colors.green[700]!,
-            RoomSyncStatusKind.syncing => Colors.blue[700]!,
-            RoomSyncStatusKind.connectedWaitingSync ||
-            RoomSyncStatusKind.connectedStale => Colors.orange[700]!,
-            RoomSyncStatusKind.syncDisabled ||
-            RoomSyncStatusKind.notLoggedIn ||
-            RoomSyncStatusKind.syncOff => Colors.grey[700]!,
-          };
+    final roomStatusLabel = roomStatus == null
+        ? null
+        : _roomStatusLabel(context, roomStatus);
+    final roomStatusColor = (() {
+      if (roomStatus == null) return Colors.grey[600];
+      switch (roomStatus) {
+        case RoomSyncStatus.syncing:
+          return Colors.blue[700];
+        case RoomSyncStatus.connectedSynced:
+          return Colors.green[700];
+        case RoomSyncStatus.disabled:
+        case RoomSyncStatus.notLoggedIn:
+          return Colors.grey[700];
+        default:
+          return Colors.orange[700];
+      }
+    })();
 
     final subtitleLines = <Widget>[
       if (!compactView) Text(contact.pathLabel),
-      if (roomStatus != null)
-        Text(roomStatus, style: TextStyle(fontSize: 12, color: roomStatusColor)),
+      if (roomStatusLabel != null)
+        Text(
+          roomStatusLabel,
+          style: TextStyle(fontSize: 12, color: roomStatusColor),
+        ),
       if (!compactView) Text(contact.shortPubKeyHex, style: TextStyle(fontSize: 12)),
     ];
 
@@ -1331,5 +1384,26 @@ class _ContactTile extends StatelessWidget {
     return days == 1
         ? context.l10n.contacts_lastSeenDayAgo
         : context.l10n.contacts_lastSeenDaysAgo(days);
+  }
+
+  String _roomStatusLabel(BuildContext context, RoomSyncStatus status) {
+    switch (status) {
+      case RoomSyncStatus.off:
+        return context.l10n.roomSync_statusOff;
+      case RoomSyncStatus.disabled:
+        return context.l10n.roomSync_statusDisabled;
+      case RoomSyncStatus.syncing:
+        return context.l10n.roomSync_statusSyncing;
+      case RoomSyncStatus.connectedWaiting:
+        return context.l10n.roomSync_statusConnectedWaiting;
+      case RoomSyncStatus.connectedStale:
+        return context.l10n.roomSync_statusConnectedStale;
+      case RoomSyncStatus.connectedSynced:
+        return context.l10n.roomSync_statusConnectedSynced;
+      case RoomSyncStatus.notLoggedIn:
+        return context.l10n.roomSync_statusNotLoggedIn;
+      case RoomSyncStatus.notSynced:
+        return context.l10n.roomSync_statusNotSynced;
+    }
   }
 }

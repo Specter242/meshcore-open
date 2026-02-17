@@ -10,14 +10,15 @@ import 'app_settings_service.dart';
 import 'app_debug_log_service.dart';
 import 'storage_service.dart';
 
-enum RoomSyncStatusKind {
-  syncOff,
-  syncDisabled,
+enum RoomSyncStatus {
+  off,
+  disabled,
   syncing,
-  connectedWaitingSync,
+  connectedWaiting,
   connectedStale,
   connectedSynced,
   notLoggedIn,
+  notSynced,
 }
 
 class RoomSyncService extends ChangeNotifier {
@@ -43,6 +44,7 @@ class RoomSyncService extends ChangeNotifier {
   bool _started = false;
   bool _syncInFlight = false;
   bool _autoLoginInProgress = false;
+  bool _lastRoomSyncEnabled = true;
 
   RoomSyncService({
     required RoomSyncStore roomSyncStore,
@@ -94,6 +96,7 @@ class RoomSyncService extends ChangeNotifier {
     if (_started) return;
     _connector = connector;
     _appSettingsService = appSettingsService;
+    _lastRoomSyncEnabled = appSettingsService.settings.roomSyncEnabled;
     _debugLogService = appDebugLogService;
     _states
       ..clear()
@@ -101,12 +104,15 @@ class RoomSyncService extends ChangeNotifier {
     _lastConnectionState = connector.state;
     _frameSubscription = connector.receivedFrames.listen(_handleFrame);
     connector.addListener(_handleConnectorChange);
+    appSettingsService.addListener(_handleSettingsChange);
     _started = true;
     notifyListeners();
   }
 
   @override
   void dispose() {
+    _appSettingsService?.removeListener(_handleSettingsChange);
+    _connector?.removeListener(_handleConnectorChange);
     _frameSubscription?.cancel();
     _nextSyncTimer?.cancel();
     _syncTimeoutTimer?.cancel();
@@ -125,6 +131,27 @@ class RoomSyncService extends ChangeNotifier {
       _onConnected();
     } else if (state == MeshCoreConnectionState.disconnected) {
       _onDisconnected();
+    }
+  }
+
+  void _handleSettingsChange() {
+    final connector = _connector;
+    final isEnabled = _roomSyncEnabled;
+    final wasEnabled = _lastRoomSyncEnabled;
+    _lastRoomSyncEnabled = isEnabled;
+
+    if (isEnabled == wasEnabled) return;
+
+    if (!isEnabled) {
+      _syncInFlight = false;
+      _nextSyncTimer?.cancel();
+      _syncTimeoutTimer?.cancel();
+      notifyListeners();
+      return;
+    }
+
+    if (connector != null && connector.isConnected) {
+      _onConnected();
     }
   }
 
@@ -240,13 +267,7 @@ class RoomSyncService extends ChangeNotifier {
     }
 
     if (!_syncInFlight) return;
-    final syncProgressCode =
-        code == respCodeNoMoreMessages ||
-        code == respCodeContactMsgRecv ||
-        code == respCodeContactMsgRecvV3 ||
-        code == respCodeChannelMsgRecv ||
-        code == respCodeChannelMsgRecvV3;
-    if (!syncProgressCode) return;
+    if (code != respCodeNoMoreMessages) return;
     _markSyncSuccess();
   }
 
@@ -335,41 +356,23 @@ class RoomSyncService extends ChangeNotifier {
     return Duration(milliseconds: doubledMs);
   }
 
-  RoomSyncStatusKind roomStatusKind(String roomPubKeyHex) {
-    if (!_roomSyncEnabled) return RoomSyncStatusKind.syncOff;
-    if (!isRoomAutoSyncEnabled(roomPubKeyHex)) {
-      return RoomSyncStatusKind.syncDisabled;
-    }
-    if (_syncInFlight) return RoomSyncStatusKind.syncing;
+  RoomSyncStatus roomStatus(String roomPubKeyHex) {
+    if (!_roomSyncEnabled) return RoomSyncStatus.off;
+    if (!isRoomAutoSyncEnabled(roomPubKeyHex)) return RoomSyncStatus.disabled;
+    if (_syncInFlight) return RoomSyncStatus.syncing;
     final state = _states[roomPubKeyHex];
     if (_activeRoomSessions.contains(roomPubKeyHex)) {
       if (state?.lastSuccessfulSyncAtMs == null) {
-        return RoomSyncStatusKind.connectedWaitingSync;
+        return RoomSyncStatus.connectedWaiting;
       }
       return isRoomStale(roomPubKeyHex)
-          ? RoomSyncStatusKind.connectedStale
-          : RoomSyncStatusKind.connectedSynced;
+          ? RoomSyncStatus.connectedStale
+          : RoomSyncStatus.connectedSynced;
     }
-    return RoomSyncStatusKind.notLoggedIn;
-  }
-
-  String? roomStatusLabel(String roomPubKeyHex) {
-    switch (roomStatusKind(roomPubKeyHex)) {
-      case RoomSyncStatusKind.syncOff:
-        return 'Room sync off';
-      case RoomSyncStatusKind.syncDisabled:
-        return 'Sync disabled';
-      case RoomSyncStatusKind.syncing:
-        return 'Syncing...';
-      case RoomSyncStatusKind.connectedWaitingSync:
-        return 'Connected, waiting sync';
-      case RoomSyncStatusKind.connectedStale:
-        return 'Connected, stale';
-      case RoomSyncStatusKind.connectedSynced:
-        return 'Connected, synced';
-      case RoomSyncStatusKind.notLoggedIn:
-        return 'Not logged in';
+    if (state?.lastFailureAtMs != null) {
+      return RoomSyncStatus.notLoggedIn;
     }
+    return RoomSyncStatus.notSynced;
   }
 
   void _recordLoginAttempt(String roomPubKeyHex) {
