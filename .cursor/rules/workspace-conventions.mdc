@@ -28,7 +28,9 @@ This workspace contains three directories. They are NOT interchangeable:
 ## Build and Deploy
 
 - Always build and test on the meshcore-open-unified/ directory.
-- Use flutter build apk --debug then flutter install to deploy to the connected phone.
+- For phone updates, use in-place install only: `adb install -r <apk>`.
+- Never use `flutter install` in this workspace because it may uninstall first and wipe app data.
+- If install fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, stop and ask before any uninstall action.
 - Verify dart analyze lib/ passes with zero errors before committing.
 
 ## Feature Work

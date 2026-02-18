@@ -1,23 +1,23 @@
 ---
-description: Always install latest build to connected Android phone
+description: Safe Android install without uninstall/data wipe
 alwaysApply: true
 ---
 
-# Android Phone Deploy Rule
+# Android Safe Deploy Rule
 
-When deploying this app to my phone, always update the installed app with the newest build.
+When deploying to a connected Android phone, protect local app data.
 
-- Do not stop at "run only" behavior.
-- Prefer install-first deployment so the device has the latest APK installed.
-- Use `flutter install` for phone deployment.
-- If needed, build first, then install the resulting APK.
+- Never run uninstall-based flows (`flutter install`, `adb uninstall`, or any flow that uninstalls first).
+- Always use in-place install only: `adb install -r`.
+- Do not switch build/signing variants without explicit user confirmation, because mismatch can force uninstall.
+- If in-place install fails due to signature mismatch (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`), stop and ask the user.
+- If needed, build first, then install the exact built APK with `-r`.
 
 Preferred commands:
 
 ```bash
-~/flutter/bin/flutter pub get
-~/flutter/bin/flutter build apk --debug
-~/flutter/bin/flutter install
+flutter build apk --debug
+adb -s <device_id> install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-If app launch is requested separately, run it after install.
+Use `tools/safe_install_android.sh` when available.
