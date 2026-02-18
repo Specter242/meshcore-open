@@ -2,6 +2,8 @@ import 'dart:typed_data';
 import '../connector/meshcore_protocol.dart';
 
 class Contact {
+  static const int favoriteFlagMask = 0x01;
+
   final Uint8List publicKey;
   final String name;
   final int type;
@@ -14,6 +16,7 @@ class Contact {
   final double? latitude;
   final double? longitude;
   final DateTime lastSeen;
+  final DateTime lastModified;
   final DateTime lastMessageAt;
 
   Contact({
@@ -28,8 +31,10 @@ class Contact {
     this.latitude,
     this.longitude,
     required this.lastSeen,
+    DateTime? lastModified,
     DateTime? lastMessageAt,
-  }) : lastMessageAt = lastMessageAt ?? lastSeen;
+  }) : lastModified = lastModified ?? lastSeen,
+       lastMessageAt = lastMessageAt ?? lastSeen;
 
   String get publicKeyHex => pubKeyToHex(publicKey);
 

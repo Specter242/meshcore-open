@@ -65,6 +65,7 @@ void main() async {
   );
 
   await connector.loadContactCache();
+  await connector.loadDiscoveredNodeCache();
   await connector.loadChannelSettings();
   await connector.loadCachedChannels();
 

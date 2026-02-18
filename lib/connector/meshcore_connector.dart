@@ -26,6 +26,7 @@ import '../storage/channel_settings_store.dart';
 import '../storage/channel_store.dart';
 import '../storage/contact_settings_store.dart';
 import '../storage/contact_store.dart';
+import '../storage/discovered_node_store.dart';
 import '../storage/message_store.dart';
 import '../storage/unread_store.dart';
 import '../utils/app_logger.dart';
@@ -63,6 +64,7 @@ class MeshCoreConnector extends ChangeNotifier {
 
   final List<ScanResult> _scanResults = [];
   final List<Contact> _contacts = [];
+  final List<Contact> _discoveredNodes = [];
   final List<Channel> _channels = [];
   final Map<String, List<Message>> _conversations = {};
   final Map<int, List<ChannelMessage>> _channelMessages = {};
@@ -159,6 +161,7 @@ class MeshCoreConnector extends ChangeNotifier {
   final ChannelSettingsStore _channelSettingsStore = ChannelSettingsStore();
   final ContactSettingsStore _contactSettingsStore = ContactSettingsStore();
   final ContactStore _contactStore = ContactStore();
+  final DiscoveredNodeStore _discoveredNodeStore = DiscoveredNodeStore();
   final ChannelStore _channelStore = ChannelStore();
   final UnreadStore _unreadStore = UnreadStore();
   List<Channel> _cachedChannels = [];
@@ -167,6 +170,7 @@ class MeshCoreConnector extends ChangeNotifier {
       false; // Track if last sent message was a CLI command
   final Map<String, bool> _contactSmazEnabled = {};
   final Set<String> _knownContactKeys = {};
+  final Set<String> _knownDiscoveredNodeKeys = {};
   final Map<String, int> _contactUnreadCount = {};
   bool _unreadStateLoaded = false;
   final Map<String, _RepeaterAckContext> _pendingRepeaterAcks = {};
@@ -205,6 +209,7 @@ class MeshCoreConnector extends ChangeNotifier {
     );
   }
 
+  List<Contact> get discoveredNodes => List.unmodifiable(_discoveredNodes);
   List<Channel> get channels => List.unmodifiable(_channels);
   bool get isConnected => _state == MeshCoreConnectionState.connected;
   bool get isReconnecting => _state == MeshCoreConnectionState.reconnecting;
@@ -565,6 +570,16 @@ class MeshCoreConnector extends ChangeNotifier {
     for (final contact in cached) {
       _ensureContactSmazSettingLoaded(contact.publicKeyHex);
     }
+  }
+
+  Future<void> loadDiscoveredNodeCache() async {
+    final cached = await _discoveredNodeStore.loadNodes();
+    _discoveredNodes
+      ..clear()
+      ..addAll(cached);
+    _knownDiscoveredNodeKeys
+      ..clear()
+      ..addAll(cached.map((node) => node.publicKeyHex));
   }
 
   Future<void> loadChannelSettings({int? maxChannels}) async {
@@ -1961,6 +1976,9 @@ class MeshCoreConnector extends ChangeNotifier {
         debugPrint('Got END_OF_CONTACTS');
         _isLoadingContacts = false;
         _preserveContactsOnRefresh = false;
+        _knownContactKeys
+          ..clear()
+          ..addAll(_contacts.map((contact) => contact.publicKeyHex));
         notifyListeners();
         unawaited(_persistContacts());
         if (!_didInitialQueueSync || _pendingQueueSync) {
@@ -1991,6 +2009,10 @@ class MeshCoreConnector extends ChangeNotifier {
         break;
       case pushCodePathUpdated:
         _handlePathUpdated(frame);
+        break;
+      case pushCodeAdvert:
+      case pushCodeNewAdvert:
+        _handleAdvert(frame);
         break;
       case pushCodeLoginSuccess:
       case pushCodeLoginFail:
@@ -2212,20 +2234,44 @@ class MeshCoreConnector extends ChangeNotifier {
     }
   }
 
-  void _handleContact(Uint8List frame) {
+  void _handleAdvert(Uint8List frame) {
+    if (frame.isEmpty) return;
+    final normalized = Uint8List.fromList(frame);
+    normalized[0] = respCodeContact;
+    _handleContact(normalized, fromAdvertPush: true);
+  }
+
+  bool _shouldSaveAsContact(String keyHex, {required bool fromAdvertPush}) {
+    if (fromAdvertPush) return false;
+    if (_knownContactKeys.contains(keyHex)) return true;
+    if (_isLoadingContacts && _knownContactKeys.isEmpty) return true;
+    return false;
+  }
+
+  void _handleContact(Uint8List frame, {bool fromAdvertPush = false}) {
     final contact = Contact.fromFrame(frame);
     if (contact != null) {
+      final keyHex = contact.publicKeyHex;
+      final hasSeenNode =
+          _knownContactKeys.contains(keyHex) ||
+          _knownDiscoveredNodeKeys.contains(keyHex);
+
       if (contact.type == advTypeRepeater) {
-        _contactUnreadCount.remove(contact.publicKeyHex);
+        _contactUnreadCount.remove(keyHex);
         _unreadStore.saveContactUnreadCount(
           Map<String, int>.from(_contactUnreadCount),
         );
       }
-      // Check if this is a new contact
-      final isNewContact = !_knownContactKeys.contains(contact.publicKeyHex);
+
       final existingIndex = _contacts.indexWhere(
-        (c) => c.publicKeyHex == contact.publicKeyHex,
+        (c) => c.publicKeyHex == keyHex,
       );
+      final shouldSaveAsContact = _shouldSaveAsContact(
+        keyHex,
+        fromAdvertPush: fromAdvertPush,
+      );
+      bool updatedContacts = false;
+      bool updatedDiscovered = false;
 
       if (existingIndex >= 0) {
         final existing = _contacts[existingIndex];
@@ -2239,54 +2285,145 @@ class MeshCoreConnector extends ChangeNotifier {
           tag: 'Connector',
         );
 
-        // CRITICAL: Preserve user's path override when contact is refreshed from device
         _contacts[existingIndex] = contact.copyWith(
           lastMessageAt: mergedLastMessageAt,
-          pathOverride: existing.pathOverride, // Preserve user's path choice
+          pathOverride: existing.pathOverride,
           pathOverrideBytes: existing.pathOverrideBytes,
         );
+        updatedContacts = true;
 
         appLogger.info(
           'After merge: pathOverride=${_contacts[existingIndex].pathOverride}, devicePath=${_contacts[existingIndex].pathLength}',
           tag: 'Connector',
         );
-      } else {
+      } else if (shouldSaveAsContact) {
         _contacts.add(contact);
+        _knownContactKeys.add(keyHex);
+        _removeDiscoveredNode(keyHex);
+        updatedContacts = true;
+        updatedDiscovered = true;
         appLogger.info(
           'Added new contact ${contact.name}: pathLen=${contact.pathLength}',
           tag: 'Connector',
         );
+      } else {
+        _upsertDiscoveredNode(contact);
+        updatedDiscovered = true;
+        appLogger.info(
+          'Tracked discovered node ${contact.name}: pathLen=${contact.pathLength}',
+          tag: 'Connector',
+        );
       }
-      _knownContactKeys.add(contact.publicKeyHex);
-      _loadMessagesForContact(contact.publicKeyHex);
 
-      // Add path to history if we have a valid path
-      if (_pathHistoryService != null && contact.pathLength >= 0) {
-        _pathHistoryService!.handlePathUpdated(contact);
-      }
-
-      notifyListeners();
-
-      // Show notification for new contact (advertisement)
-      if (isNewContact && _appSettingsService != null) {
-        final settings = _appSettingsService!.settings;
-        if (settings.notificationsEnabled && settings.notifyOnNewAdvert) {
-          _notificationService.showAdvertNotification(
-            contactName: contact.name,
-            contactType: contact.typeLabel,
-            contactId: contact.publicKeyHex,
-          );
+      if (updatedContacts) {
+        _loadMessagesForContact(keyHex);
+        if (_pathHistoryService != null && contact.pathLength >= 0) {
+          _pathHistoryService!.handlePathUpdated(contact);
         }
       }
 
-      if (!_isLoadingContacts) {
+      notifyListeners();
+      _notifyNewNodeDiscovered(contact, isNewNode: !hasSeenNode);
+
+      if (updatedContacts && !_isLoadingContacts) {
         unawaited(_persistContacts());
+      }
+      if (updatedDiscovered) {
+        unawaited(_persistDiscoveredNodes());
       }
     }
   }
 
   Future<void> _persistContacts() async {
     await _contactStore.saveContacts(_contacts);
+  }
+
+  void _upsertDiscoveredNode(Contact node) {
+    final keyHex = node.publicKeyHex;
+    if (_knownContactKeys.contains(keyHex)) return;
+    if (_selfPublicKey != null && listEquals(node.publicKey, _selfPublicKey)) {
+      return;
+    }
+
+    final existingIndex = _discoveredNodes.indexWhere(
+      (n) => n.publicKeyHex == keyHex,
+    );
+    if (existingIndex >= 0) {
+      final existing = _discoveredNodes[existingIndex];
+      final mergedLastMessageAt =
+          existing.lastMessageAt.isAfter(node.lastMessageAt)
+          ? existing.lastMessageAt
+          : node.lastMessageAt;
+      _discoveredNodes[existingIndex] = node.copyWith(
+        lastMessageAt: mergedLastMessageAt,
+      );
+    } else {
+      _discoveredNodes.add(node);
+      _knownDiscoveredNodeKeys.add(keyHex);
+    }
+  }
+
+  void _removeDiscoveredNode(String keyHex) {
+    _discoveredNodes.removeWhere((node) => node.publicKeyHex == keyHex);
+    _knownDiscoveredNodeKeys.remove(keyHex);
+  }
+
+  void _notifyNewNodeDiscovered(Contact node, {required bool isNewNode}) {
+    if (!isNewNode || _appSettingsService == null) return;
+    final settings = _appSettingsService!.settings;
+    if (settings.notificationsEnabled && settings.notifyOnNewAdvert) {
+      _notificationService.showAdvertNotification(
+        contactName: node.name,
+        contactType: node.typeLabel,
+        contactId: node.publicKeyHex,
+      );
+    }
+  }
+
+  Future<void> _persistDiscoveredNodes() async {
+    await _discoveredNodeStore.saveNodes(_discoveredNodes);
+  }
+
+  Future<void> addDiscoveredNodeToContacts(Contact node) async {
+    if (!isConnected) return;
+    final keyHex = node.publicKeyHex;
+    final safePathLen = node.pathLength.clamp(-1, maxPathSize).toInt();
+    final pathBytes = safePathLen > 0 ? node.path : Uint8List(0);
+
+    await sendFrame(
+      buildUpdateContactPathFrame(
+        node.publicKey,
+        pathBytes,
+        safePathLen,
+        type: node.type,
+        flags: node.flags,
+        name: node.name,
+      ),
+    );
+
+    final existingIndex = _contacts.indexWhere((c) => c.publicKeyHex == keyHex);
+    if (existingIndex >= 0) {
+      _contacts[existingIndex] = node.copyWith(
+        flags: _contacts[existingIndex].flags,
+        pathOverride: _contacts[existingIndex].pathOverride,
+        pathOverrideBytes: _contacts[existingIndex].pathOverrideBytes,
+      );
+    } else {
+      _contacts.add(node);
+    }
+    _knownContactKeys.add(keyHex);
+    _removeDiscoveredNode(keyHex);
+    notifyListeners();
+
+    await _persistContacts();
+    await _persistDiscoveredNodes();
+    await getContactByKey(node.publicKey);
+  }
+
+  Future<void> dismissDiscoveredNode(Contact node) async {
+    _removeDiscoveredNode(node.publicKeyHex);
+    notifyListeners();
+    await _persistDiscoveredNodes();
   }
 
   int _latestContactLastmod() {
