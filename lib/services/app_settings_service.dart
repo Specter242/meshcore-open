@@ -166,4 +166,8 @@ class AppSettingsService extends ChangeNotifier {
   Future<void> setContactsCompactView(bool value) async {
     await updateSettings(_settings.copyWith(contactsCompactView: value));
   }
+
+  Future<void> setAutoReconnectEnabled(bool value) async {
+    await updateSettings(_settings.copyWith(autoReconnectEnabled: value));
+  }
 }

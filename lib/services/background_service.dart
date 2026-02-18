@@ -26,7 +26,7 @@ class BackgroundService {
         playSound: false,
       ),
       foregroundTaskOptions: const ForegroundTaskOptions(
-        interval: 5000,
+        interval: 15000,
         autoRunOnBoot: false,
         allowWifiLock: false,
       ),
@@ -45,6 +45,19 @@ class BackgroundService {
       notificationTitle: 'MeshCore running',
       notificationText: 'Keeping BLE connected',
       callback: startCallback,
+    );
+  }
+
+  Future<void> updateNotification({
+    required String title,
+    required String text,
+  }) async {
+    if (!Platform.isAndroid) return;
+    final running = await FlutterForegroundTask.isRunningService;
+    if (!running) return;
+    await FlutterForegroundTask.updateService(
+      notificationTitle: title,
+      notificationText: text,
     );
   }
 

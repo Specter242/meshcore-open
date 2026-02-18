@@ -29,6 +29,8 @@ class AppSettingsScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 _buildNotificationsCard(context, settingsService),
                 const SizedBox(height: 16),
+                _buildConnectionCard(context, settingsService, connector),
+                const SizedBox(height: 16),
                 _buildMessagingCard(context, settingsService),
                 const SizedBox(height: 16),
                 _buildRadioDefaultsCard(context, settingsService),
@@ -239,6 +241,53 @@ class AppSettingsScreen extends StatelessWidget {
                     settingsService.setNotifyOnNewAdvert(value);
                   }
                 : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConnectionCard(
+    BuildContext context,
+    AppSettingsService settingsService,
+    MeshCoreConnector connector,
+  ) {
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              context.l10n.appSettings_connection,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.bluetooth_connected),
+            title: Text(context.l10n.appSettings_autoReconnect),
+            subtitle: Text(context.l10n.appSettings_autoReconnectSubtitle),
+            value: settingsService.settings.autoReconnectEnabled,
+            onChanged: (value) {
+              settingsService.setAutoReconnectEnabled(value);
+              if (!value && connector.isReconnecting) {
+                connector.cancelReconnection();
+              }
+              if (value &&
+                  connector.state == MeshCoreConnectionState.disconnected) {
+                connector.triggerReconnect();
+              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    value
+                        ? context.l10n.appSettings_autoReconnectEnabled
+                        : context.l10n.appSettings_autoReconnectDisabled,
+                  ),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
           ),
         ],
       ),

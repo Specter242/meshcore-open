@@ -29,6 +29,7 @@ class AppSettings {
   final int roomSyncStaleMinutes;
   final String defaultRadioProfile;
   final bool contactsCompactView;
+  final bool autoReconnectEnabled;
 
   AppSettings({
     this.clearPathOnMaxRetry = false,
@@ -59,6 +60,7 @@ class AppSettings {
     this.roomSyncStaleMinutes = 15,
     this.defaultRadioProfile = 'region_auto',
     this.contactsCompactView = false,
+    this.autoReconnectEnabled = true,
   }) : batteryChemistryByDeviceId = batteryChemistryByDeviceId ?? {};
 
   Map<String, dynamic> toJson() {
@@ -91,6 +93,7 @@ class AppSettings {
       'room_sync_stale_minutes': roomSyncStaleMinutes,
       'default_radio_profile': defaultRadioProfile,
       'contacts_compact_view': contactsCompactView,
+      'auto_reconnect_enabled': autoReconnectEnabled,
     };
   }
 
@@ -136,6 +139,7 @@ class AppSettings {
       defaultRadioProfile:
           json['default_radio_profile'] as String? ?? 'region_auto',
       contactsCompactView: json['contacts_compact_view'] as bool? ?? false,
+      autoReconnectEnabled: json['auto_reconnect_enabled'] as bool? ?? true,
     );
   }
 
@@ -168,6 +172,7 @@ class AppSettings {
     int? roomSyncStaleMinutes,
     String? defaultRadioProfile,
     bool? contactsCompactView,
+    bool? autoReconnectEnabled,
   }) {
     return AppSettings(
       clearPathOnMaxRetry: clearPathOnMaxRetry ?? this.clearPathOnMaxRetry,
@@ -209,6 +214,7 @@ class AppSettings {
       roomSyncStaleMinutes: roomSyncStaleMinutes ?? this.roomSyncStaleMinutes,
       defaultRadioProfile: defaultRadioProfile ?? this.defaultRadioProfile,
       contactsCompactView: contactsCompactView ?? this.contactsCompactView,
+      autoReconnectEnabled: autoReconnectEnabled ?? this.autoReconnectEnabled,
     );
   }
 }

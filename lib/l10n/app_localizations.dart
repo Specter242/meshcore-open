@@ -364,6 +364,30 @@ abstract class AppLocalizations {
   /// **'Connection failed: {error}'**
   String scanner_connectionFailed(String error);
 
+  /// No description provided for @scanner_reconnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnecting to {deviceName}...'**
+  String scanner_reconnecting(String deviceName);
+
+  /// No description provided for @scanner_waitingForDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for {deviceName}...'**
+  String scanner_waitingForDevice(String deviceName);
+
+  /// No description provided for @scanner_lostConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Lost connection to {deviceName}'**
+  String scanner_lostConnection(String deviceName);
+
+  /// No description provided for @scanner_reconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect'**
+  String get scanner_reconnect;
+
   /// No description provided for @scanner_stop.
   ///
   /// In en, this message translates to:
@@ -1029,6 +1053,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show notification when new nodes are discovered'**
   String get appSettings_advertisementNotificationsSubtitle;
+
+  /// No description provided for @appSettings_connection.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection'**
+  String get appSettings_connection;
+
+  /// No description provided for @appSettings_autoReconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically reconnect'**
+  String get appSettings_autoReconnect;
+
+  /// No description provided for @appSettings_autoReconnectSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep trying to reach your companion when Bluetooth connection is lost, including after extended time out of range.'**
+  String get appSettings_autoReconnectSubtitle;
+
+  /// No description provided for @appSettings_autoReconnectEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-reconnect enabled'**
+  String get appSettings_autoReconnectEnabled;
+
+  /// No description provided for @appSettings_autoReconnectDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-reconnect disabled'**
+  String get appSettings_autoReconnectDisabled;
 
   /// No description provided for @appSettings_messaging.
   ///

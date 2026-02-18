@@ -25,7 +25,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
     final connector = Provider.of<MeshCoreConnector>(context, listen: false);
 
     _connectionListener = () {
-      if (connector.state == MeshCoreConnectionState.disconnected) {
+      if (connector.state == MeshCoreConnectionState.disconnected ||
+          connector.state == MeshCoreConnectionState.reconnecting) {
         _changedNavigation = false;
       } else if (connector.state == MeshCoreConnectionState.connected &&
           !_changedNavigation) {
@@ -128,6 +129,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
         statusText = l10n.scanner_disconnecting;
         statusColor = Colors.orange;
         break;
+      case MeshCoreConnectionState.reconnecting:
+        statusText = connector.inPassiveScanPhase
+            ? l10n.scanner_waitingForDevice(connector.deviceDisplayName)
+            : l10n.scanner_reconnecting(connector.deviceDisplayName);
+        statusColor = Colors.amber;
+        break;
       case MeshCoreConnectionState.disconnected:
         statusText = l10n.scanner_notConnected;
         statusColor = Colors.grey;
@@ -140,13 +147,42 @@ class _ScannerScreenState extends State<ScannerScreen> {
       color: statusColor.withValues(alpha: 0.1),
       child: Row(
         children: [
-          Icon(Icons.circle, size: 12, color: statusColor),
+          if (connector.state == MeshCoreConnectionState.reconnecting)
+            const SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            Icon(Icons.circle, size: 12, color: statusColor),
           const SizedBox(width: 8),
-          Text(
-            statusText,
-            style: TextStyle(color: statusColor, fontWeight: FontWeight.w500),
+          Expanded(
+            child: Text(
+              statusText,
+              style: TextStyle(color: statusColor, fontWeight: FontWeight.w500),
+            ),
           ),
+          if (connector.state == MeshCoreConnectionState.disconnected &&
+              connector.device == null &&
+              connector.selfPublicKey == null)
+            _buildReconnectButton(context, connector),
         ],
+      ),
+    );
+  }
+
+  Widget _buildReconnectButton(
+    BuildContext context,
+    MeshCoreConnector connector,
+  ) {
+    return TextButton.icon(
+      onPressed: () => connector.triggerReconnect(),
+      icon: const Icon(Icons.refresh, size: 18),
+      label: Text(context.l10n.scanner_reconnect),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
     );
   }

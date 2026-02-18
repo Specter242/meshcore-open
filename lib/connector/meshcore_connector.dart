@@ -43,6 +43,7 @@ enum MeshCoreConnectionState {
   connecting,
   connected,
   disconnecting,
+  reconnecting,
 }
 
 class MeshCoreConnector extends ChangeNotifier {
@@ -78,6 +79,24 @@ class MeshCoreConnector extends ChangeNotifier {
   Timer? _reconnectTimer;
   Timer? _batteryPollTimer;
   int _reconnectAttempts = 0;
+  static const int _maxAggressiveReconnectAttempts = 12;
+
+  // Connection health monitor
+  Timer? _healthCheckTimer;
+  Timer? _healthWatchdog;
+  DateTime? _lastResponseTime;
+  static const Duration _healthCheckInterval = Duration(seconds: 45);
+  static const Duration _healthWatchdogTimeout = Duration(seconds: 10);
+
+  // Passive BLE scanning for back-in-range recovery (Phase 2)
+  Timer? _passiveScanTimer;
+  bool _inPassiveScanPhase = false;
+  StreamSubscription<List<ScanResult>>? _passiveScanSubscription;
+  static const Duration _passiveScanInterval = Duration(seconds: 90);
+  static const Duration _passiveScanDuration = Duration(seconds: 5);
+
+  // Adaptive polling state
+  DateTime? _lastDisconnectTime;
 
   final StreamController<Uint8List> _receivedFramesController =
       StreamController<Uint8List>.broadcast();
@@ -123,8 +142,6 @@ class MeshCoreConnector extends ChangeNotifier {
   List<Channel> _previousChannelsCache = [];
   static const int _maxChannelSyncRetries = 3;
   static const int _channelSyncTimeoutMs = 2000; // 2 second timeout per channel
-  static const Duration _batteryPollInterval = Duration(seconds: 120);
-
   // Services
   MessageRetryService? _retryService;
   PathHistoryService? _pathHistoryService;
@@ -187,6 +204,9 @@ class MeshCoreConnector extends ChangeNotifier {
 
   List<Channel> get channels => List.unmodifiable(_channels);
   bool get isConnected => _state == MeshCoreConnectionState.connected;
+  bool get isReconnecting => _state == MeshCoreConnectionState.reconnecting;
+  int get reconnectAttempts => _reconnectAttempts;
+  bool get inPassiveScanPhase => _inPassiveScanPhase;
   bool get isLoadingContacts => _isLoadingContacts;
   bool get isLoadingChannels => _isLoadingChannels;
   Stream<Uint8List> get receivedFrames => _receivedFramesController.stream;
@@ -776,8 +796,19 @@ class MeshCoreConnector extends ChangeNotifier {
 
       _setState(MeshCoreConnectionState.connected);
 
+      // Reset reconnection state on successful connect
+      _reconnectAttempts = 0;
+      _stopPassiveScanning();
+
+      // Request balanced connection priority for power savings
+      try {
+        await device.requestConnectionPriority(
+          connectionPriorityRequest: ConnectionPriority.balanced,
+        );
+      } catch (_) {}
+
       await _requestDeviceInfo();
-      _startBatteryPolling();
+      _startHealthMonitor();
       final gotSelfInfo = await _waitForSelfInfo(
         timeout: const Duration(seconds: 3),
       );
@@ -829,12 +860,16 @@ class MeshCoreConnector extends ChangeNotifier {
     return result;
   }
 
-  bool get _shouldAutoReconnect => !_manualDisconnect && _lastDeviceId != null;
+  bool get _shouldAutoReconnect =>
+      !_manualDisconnect &&
+      _lastDeviceId != null &&
+      (_appSettingsService?.settings.autoReconnectEnabled ?? true);
 
   void _cancelReconnectTimer() {
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _reconnectAttempts = 0;
+    _stopPassiveScanning();
   }
 
   int _nextReconnectDelayMs() {
@@ -847,6 +882,13 @@ class MeshCoreConnector extends ChangeNotifier {
   void _scheduleReconnect() {
     if (!_shouldAutoReconnect) return;
     if (_reconnectTimer?.isActive == true) return;
+    if (_inPassiveScanPhase) return;
+
+    // Phase 1 exhausted -> transition to Phase 2 (passive scanning)
+    if (_reconnectAttempts >= _maxAggressiveReconnectAttempts) {
+      _startPassiveScanning();
+      return;
+    }
 
     final delayMs = _nextReconnectDelayMs();
     _reconnectTimer = Timer(Duration(milliseconds: delayMs), () async {
@@ -871,6 +913,97 @@ class MeshCoreConnector extends ChangeNotifier {
     });
   }
 
+  // Phase 2: Low-power periodic BLE scan to detect device back in range
+  void _startPassiveScanning() {
+    if (_inPassiveScanPhase) return;
+    _inPassiveScanPhase = true;
+    _setState(MeshCoreConnectionState.reconnecting);
+    debugPrint('[Reconnect] Phase 2: starting passive BLE scanning');
+
+    _passiveScanTimer?.cancel();
+    _passiveScanTimer = Timer.periodic(_passiveScanInterval, (_) {
+      _runPassiveScan();
+    });
+    // Run first scan immediately
+    _runPassiveScan();
+  }
+
+  void _stopPassiveScanning() {
+    _passiveScanTimer?.cancel();
+    _passiveScanTimer = null;
+    _passiveScanSubscription?.cancel();
+    _passiveScanSubscription = null;
+    _inPassiveScanPhase = false;
+  }
+
+  Future<void> _runPassiveScan() async {
+    if (!_shouldAutoReconnect || !_inPassiveScanPhase) return;
+    if (_state == MeshCoreConnectionState.connecting ||
+        _state == MeshCoreConnectionState.connected) {
+      return;
+    }
+
+    try {
+      await FlutterBluePlus.stopScan();
+      await _passiveScanSubscription?.cancel();
+
+      _passiveScanSubscription = FlutterBluePlus.scanResults.listen((results) {
+        for (var result in results) {
+          final matchesId = _lastDeviceId != null &&
+              result.device.remoteId.toString() == _lastDeviceId;
+          final matchesName =
+              result.device.platformName.startsWith("MeshCore-") ||
+              result.advertisementData.advName.startsWith("MeshCore-") ||
+              result.advertisementData.advName.startsWith("Whisper-");
+
+          if (matchesId || matchesName) {
+            debugPrint('[Reconnect] Phase 2: device found in scan, connecting');
+            _stopPassiveScanning();
+            _reconnectAttempts = 0;
+            connect(result.device, displayName: _lastDeviceDisplayName)
+                .catchError((_) {
+              // Connection failed, restart passive scanning
+              _startPassiveScanning();
+            });
+            return;
+          }
+        }
+      });
+
+      await FlutterBluePlus.startScan(
+        timeout: _passiveScanDuration,
+        androidScanMode: AndroidScanMode.lowPower,
+      );
+    } catch (e) {
+      debugPrint('[Reconnect] Phase 2 scan error: $e');
+    }
+  }
+
+  /// Cancel reconnection and transition to disconnected.
+  /// Called when the user toggles auto-reconnect off during reconnection.
+  void cancelReconnection() {
+    _cancelReconnectTimer();
+    if (_state == MeshCoreConnectionState.reconnecting) {
+      _setState(MeshCoreConnectionState.disconnected);
+      unawaited(_backgroundService?.stop());
+    }
+  }
+
+  /// Trigger reconnection to last known device.
+  /// Called from manual reconnect button or when auto-reconnect is re-enabled.
+  Future<void> triggerReconnect() async {
+    if (_lastDeviceId == null) return;
+    if (_state == MeshCoreConnectionState.connecting ||
+        _state == MeshCoreConnectionState.connected ||
+        _state == MeshCoreConnectionState.reconnecting) {
+      return;
+    }
+    _manualDisconnect = false;
+    _reconnectAttempts = 0;
+    _setState(MeshCoreConnectionState.reconnecting);
+    _scheduleReconnect();
+  }
+
   Future<void> disconnect({bool manual = true}) async {
     if (_state == MeshCoreConnectionState.disconnecting) return;
 
@@ -882,6 +1015,7 @@ class MeshCoreConnector extends ChangeNotifier {
       _manualDisconnect = false;
     }
     _setState(MeshCoreConnectionState.disconnecting);
+    _stopHealthMonitor();
     _stopBatteryPolling();
 
     await _notifySubscription?.cancel();
@@ -930,9 +1064,12 @@ class MeshCoreConnector extends ChangeNotifier {
     _channelSyncInFlight = false;
     _hasLoadedChannels = false;
 
-    _setState(MeshCoreConnectionState.disconnected);
-    if (!manual) {
+    if (!manual && _shouldAutoReconnect) {
+      _lastDisconnectTime = DateTime.now();
+      _setState(MeshCoreConnectionState.reconnecting);
       _scheduleReconnect();
+    } else {
+      _setState(MeshCoreConnectionState.disconnected);
     }
   }
 
@@ -964,20 +1101,67 @@ class MeshCoreConnector extends ChangeNotifier {
     await sendFrame(buildGetBattAndStorageFrame());
   }
 
-  void _startBatteryPolling() {
+  void _stopBatteryPolling() {
     _batteryPollTimer?.cancel();
-    _batteryPollTimer = Timer.periodic(_batteryPollInterval, (timer) {
+    _batteryPollTimer = null;
+  }
+
+  // Connection health monitor: sends a lightweight BLE frame periodically
+  // and watches for a response. Also serves as battery polling.
+  void _startHealthMonitor() {
+    _stopHealthMonitor();
+    _lastResponseTime = DateTime.now();
+
+    _healthCheckTimer = Timer.periodic(_healthCheckInterval, (_) {
+      if (!isConnected) return;
+      _healthWatchdog?.cancel();
+      _healthWatchdog = Timer(_healthWatchdogTimeout, () {
+        if (!isConnected) return;
+        final elapsed = _lastResponseTime != null
+            ? DateTime.now().difference(_lastResponseTime!)
+            : _healthCheckInterval + _healthWatchdogTimeout;
+        if (elapsed >= _healthCheckInterval + _healthWatchdogTimeout) {
+          debugPrint('[HealthMonitor] No response within watchdog window, treating as disconnected');
+          _handleDisconnection();
+        }
+      });
+      unawaited(requestBatteryStatus(force: true));
+    });
+
+    // Also start the legacy battery poll at a slower adaptive rate
+    _startAdaptiveBatteryPolling();
+  }
+
+  void _stopHealthMonitor() {
+    _healthCheckTimer?.cancel();
+    _healthCheckTimer = null;
+    _healthWatchdog?.cancel();
+    _healthWatchdog = null;
+  }
+
+  void _onFrameReceived() {
+    _lastResponseTime = DateTime.now();
+    _healthWatchdog?.cancel();
+    _healthWatchdog = null;
+  }
+
+  Duration get _adaptiveBatteryInterval {
+    final recentDisconnect = _lastDisconnectTime != null &&
+        DateTime.now().difference(_lastDisconnectTime!).inMinutes < 10;
+
+    if (recentDisconnect) return const Duration(seconds: 60);
+    return const Duration(seconds: 180);
+  }
+
+  void _startAdaptiveBatteryPolling() {
+    _batteryPollTimer?.cancel();
+    _batteryPollTimer = Timer.periodic(_adaptiveBatteryInterval, (timer) {
       if (!isConnected) {
         timer.cancel();
         return;
       }
       unawaited(requestBatteryStatus(force: true));
     });
-  }
-
-  void _stopBatteryPolling() {
-    _batteryPollTimer?.cancel();
-    _batteryPollTimer = null;
   }
 
   Future<void> refreshDeviceInfo() async {
@@ -1734,6 +1918,8 @@ class MeshCoreConnector extends ChangeNotifier {
 
   void _handleFrame(List<int> data) {
     if (data.isEmpty) return;
+
+    _onFrameReceived();
 
     final frame = Uint8List.fromList(data);
     _receivedFramesController.add(frame);
@@ -3276,6 +3462,7 @@ class MeshCoreConnector extends ChangeNotifier {
   }
 
   void _handleDisconnection() {
+    _stopHealthMonitor();
     _stopBatteryPolling();
 
     for (final entry in _pendingRepeaterAcks.values) {
@@ -3300,8 +3487,13 @@ class MeshCoreConnector extends ChangeNotifier {
     _isSyncingChannels = false;
     _channelSyncInFlight = false;
 
-    _setState(MeshCoreConnectionState.disconnected);
-    _scheduleReconnect();
+    _lastDisconnectTime = DateTime.now();
+    if (_shouldAutoReconnect) {
+      _setState(MeshCoreConnectionState.reconnecting);
+      _scheduleReconnect();
+    } else {
+      _setState(MeshCoreConnectionState.disconnected);
+    }
   }
 
   Map<String, String> _parseKeyValueString(String input) {
@@ -3335,7 +3527,32 @@ class MeshCoreConnector extends ChangeNotifier {
   void _setState(MeshCoreConnectionState newState) {
     if (_state != newState) {
       _state = newState;
+      _updateBackgroundNotification(newState);
       notifyListeners();
+    }
+  }
+
+  void _updateBackgroundNotification(MeshCoreConnectionState state) {
+    final name = _deviceDisplayName ?? _lastDeviceDisplayName ?? 'device';
+    switch (state) {
+      case MeshCoreConnectionState.connected:
+        _backgroundService?.updateNotification(
+          title: 'MeshCore connected',
+          text: 'Connected to $name',
+        );
+        break;
+      case MeshCoreConnectionState.reconnecting:
+        final phase = _inPassiveScanPhase ? 'Waiting for' : 'Reconnecting to';
+        _backgroundService?.updateNotification(
+          title: 'MeshCore reconnecting',
+          text: '$phase $name...',
+        );
+        break;
+      case MeshCoreConnectionState.disconnected:
+      case MeshCoreConnectionState.scanning:
+      case MeshCoreConnectionState.connecting:
+      case MeshCoreConnectionState.disconnecting:
+        break;
     }
   }
 
@@ -3346,6 +3563,10 @@ class MeshCoreConnector extends ChangeNotifier {
     _notifySubscription?.cancel();
     _reconnectTimer?.cancel();
     _batteryPollTimer?.cancel();
+    _healthCheckTimer?.cancel();
+    _healthWatchdog?.cancel();
+    _passiveScanTimer?.cancel();
+    _passiveScanSubscription?.cancel();
     _receivedFramesController.close();
 
     // Flush pending unread writes before disposal

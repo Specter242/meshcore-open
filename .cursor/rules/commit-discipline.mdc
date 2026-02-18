@@ -1,0 +1,36 @@
+---
+description: Enforces atomic commits and clean working tree discipline
+globs:
+alwaysApply: true
+---
+
+# Commit Discipline
+
+## Atomic Commits
+
+- **One logical feature per commit.** Never bundle unrelated changes.
+- **Always run `flutter analyze` before committing.** Zero issues required.
+- **Commit before moving on.** Never start the next feature with uncommitted work from the previous one.
+- **Never leave the working tree dirty when switching tasks.** Either commit, stash, or revert.
+
+## Commit Messages
+
+- Short imperative summary on the first line (e.g. "Add companion charging indicator", not "Added" or "Adding").
+- If the change is a port from another branch/repo, say so (e.g. "Port discovered nodes tracking from meshcore-open").
+- No "WIP" commits. Every commit must leave the project in a buildable, analyzable state.
+
+## Porting Features
+
+When porting code from `meshcore-open/` to `meshcore-open-unified/`:
+
+- **Use meshcore-open as the reference**, not memory. Always read the source file before writing.
+- **Port complete features.** Never add a widget that references a getter/method that doesn't exist yet in the target. If a widget needs `connector.foo`, the connector must have `foo` in the same commit.
+- **Verify compilation.** After each port, run `flutter analyze`. If it fails, fix it before committing.
+
+## Pre-Commit Checklist
+
+1. `flutter analyze` passes with zero issues
+2. All new code references resolve (no dangling getters, missing imports, etc.)
+3. Localization: if new user-facing strings were added to `app_en.arb`, run `flutter gen-l10n`
+4. Diff review: `git diff --stat` shows only files related to this one feature
+5. No secrets, no generated binary, no `.dart_tool/` artifacts

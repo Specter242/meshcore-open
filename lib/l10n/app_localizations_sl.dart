@@ -138,6 +138,24 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String scanner_reconnecting(String deviceName) {
+    return 'Reconnecting to $deviceName...';
+  }
+
+  @override
+  String scanner_waitingForDevice(String deviceName) {
+    return 'Waiting for $deviceName...';
+  }
+
+  @override
+  String scanner_lostConnection(String deviceName) {
+    return 'Lost connection to $deviceName';
+  }
+
+  @override
+  String get scanner_reconnect => 'Reconnect';
+
+  @override
   String get scanner_stop => 'Prekliči';
 
   @override
@@ -490,6 +508,22 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get appSettings_advertisementNotificationsSubtitle =>
       'Pokaži obvestilo, ko so najdene nove naprave.';
+
+  @override
+  String get appSettings_connection => 'Connection';
+
+  @override
+  String get appSettings_autoReconnect => 'Automatically reconnect';
+
+  @override
+  String get appSettings_autoReconnectSubtitle =>
+      'Keep trying to reach your companion when Bluetooth connection is lost, including after extended time out of range.';
+
+  @override
+  String get appSettings_autoReconnectEnabled => 'Auto-reconnect enabled';
+
+  @override
+  String get appSettings_autoReconnectDisabled => 'Auto-reconnect disabled';
 
   @override
   String get appSettings_messaging => 'Komuniciranje';

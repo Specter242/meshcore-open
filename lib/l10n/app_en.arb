@@ -64,6 +64,25 @@
       "error": {"type": "String"}
     }
   },
+  "scanner_reconnecting": "Reconnecting to {deviceName}...",
+  "@scanner_reconnecting": {
+    "placeholders": {
+      "deviceName": {"type": "String"}
+    }
+  },
+  "scanner_waitingForDevice": "Waiting for {deviceName}...",
+  "@scanner_waitingForDevice": {
+    "placeholders": {
+      "deviceName": {"type": "String"}
+    }
+  },
+  "scanner_lostConnection": "Lost connection to {deviceName}",
+  "@scanner_lostConnection": {
+    "placeholders": {
+      "deviceName": {"type": "String"}
+    }
+  },
+  "scanner_reconnect": "Reconnect",
   "scanner_stop": "Stop",
   "scanner_scan": "Scan",
 
@@ -188,6 +207,11 @@
   "appSettings_channelMessageNotificationsSubtitle": "Show notification when receiving channel messages",
   "appSettings_advertisementNotifications": "Advertisement Notifications",
   "appSettings_advertisementNotificationsSubtitle": "Show notification when new nodes are discovered",
+  "appSettings_connection": "Connection",
+  "appSettings_autoReconnect": "Automatically reconnect",
+  "appSettings_autoReconnectSubtitle": "Keep trying to reach your companion when Bluetooth connection is lost, including after extended time out of range.",
+  "appSettings_autoReconnectEnabled": "Auto-reconnect enabled",
+  "appSettings_autoReconnectDisabled": "Auto-reconnect disabled",
   "appSettings_messaging": "Messaging",
   "appSettings_clearPathOnMaxRetry": "Clear Path on Max Retry",
   "appSettings_clearPathOnMaxRetrySubtitle": "Reset contact path after 5 failed send attempts",
