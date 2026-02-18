@@ -11,6 +11,7 @@ import '../models/channel_message.dart';
 import '../models/contact.dart';
 import '../models/message.dart';
 import '../models/path_selection.dart';
+import '../helpers/message_scope_helper.dart';
 import '../helpers/reaction_helper.dart';
 import '../helpers/smaz.dart';
 import '../services/app_debug_log_service.dart';
@@ -597,6 +598,7 @@ class MeshCoreConnector extends ChangeNotifier {
     int timestampSeconds,
   ) async {
     if (!isConnected || text.isEmpty) return;
+    await _applyMessageScopeForText(text);
     final outboundText = prepareContactOutboundText(contact, text);
     await sendFrame(
       buildSendTextMsgFrame(
@@ -1255,6 +1257,7 @@ class MeshCoreConnector extends ChangeNotifier {
 
   Future<void> sendMessage(Contact contact, String text) async {
     if (!isConnected || text.isEmpty) return;
+    await _applyMessageScopeForText(text);
 
     // Handle auto-rotation if enabled
     PathSelection? autoSelection;
@@ -1555,6 +1558,7 @@ class MeshCoreConnector extends ChangeNotifier {
 
   Future<void> sendChannelMessage(Channel channel, String text) async {
     if (!isConnected || text.isEmpty) return;
+    await _applyMessageScopeForText(text);
 
     // Check if this is a reaction - if so, process it immediately instead of adding as a message
     final reactionInfo = ReactionHelper.parseReaction(text);
@@ -2049,6 +2053,22 @@ class MeshCoreConnector extends ChangeNotifier {
     );
   }
 
+  Future<void> setFloodScopeToken(MessageScopeToken? token) async {
+    if (!isConnected || !supportsFloodScope) return;
+    if (token == null) {
+      _activeFloodScopeTag = null;
+      await sendFrame(buildSetFloodScopeFrame());
+      return;
+    }
+
+    final normalizedTag = token.rawToken.toLowerCase();
+    if (_activeFloodScopeTag == normalizedTag) return;
+
+    final transportKey = MessageScopeHelper.transportKeyForToken(token);
+    await sendFrame(buildSetFloodScopeFrame(transportKey: transportKey));
+    _activeFloodScopeTag = normalizedTag;
+  }
+
   void _handlePathUpdated(Uint8List frame) {
     // Frame format: [0]=code, [1-32]=pub_key
     if (frame.length >= 33 && _pathHistoryService != null) {
@@ -2424,6 +2444,29 @@ class MeshCoreConnector extends ChangeNotifier {
     _removeDiscoveredNode(node.publicKeyHex);
     notifyListeners();
     await _persistDiscoveredNodes();
+  }
+
+  Future<void> _applyMessageScopeForText(String text) async {
+    if (!supportsFloodScope) return;
+    final explicitToken = MessageScopeHelper.parseFirstScopeToken(text);
+    final token = explicitToken ?? _defaultScopeTokenFromSettings();
+    if (token == null) {
+      if (_activeFloodScopeTag != null) {
+        await setFloodScopeToken(null);
+      }
+      return;
+    }
+    await setFloodScopeToken(token);
+  }
+
+  MessageScopeToken? _defaultScopeTokenFromSettings() {
+    final settings = _appSettingsService?.settings;
+    if (settings == null) return null;
+    if (!settings.defaultMessageScopeEnabled) return null;
+    final tokenText = settings.defaultMessageScopeTag.trim();
+    if (tokenText.isEmpty) return null;
+    final normalized = tokenText.startsWith('@') ? tokenText : '@$tokenText';
+    return MessageScopeHelper.parseFirstScopeToken(normalized);
   }
 
   int _latestContactLastmod() {

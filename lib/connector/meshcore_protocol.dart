@@ -156,6 +156,7 @@ const int cmdGetTelemetryReq = 39;
 const int cmdGetCustomVar = 40;
 const int cmdSetCustomVar = 41;
 const int cmdSendBinaryReq = 50;
+const int cmdSetFloodScope = 54;
 
 // Text message types
 const int txtTypePlain = 0;
@@ -776,5 +777,21 @@ Uint8List buildZeroHopContact(Uint8List pubKey) {
   final writer = BufferWriter();
   writer.writeByte(cmdShareContact);
   writer.writeBytes(pubKey);
+  return writer.toBytes();
+}
+
+// Build CMD_SET_FLOOD_SCOPE frame
+// Firmware format: [cmd=54][reserved=0][transport_key x16 optional]
+// No key bytes means clear/disable scope (global/default)
+Uint8List buildSetFloodScopeFrame({Uint8List? transportKey}) {
+  final writer = BufferWriter();
+  writer.writeByte(cmdSetFloodScope);
+  writer.writeByte(0);
+  if (transportKey != null && transportKey.isNotEmpty) {
+    if (transportKey.length != 16) {
+      throw ArgumentError('transportKey must be exactly 16 bytes');
+    }
+    writer.writeBytes(transportKey);
+  }
   return writer.toBytes();
 }

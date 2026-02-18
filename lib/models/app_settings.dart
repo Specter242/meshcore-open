@@ -29,6 +29,8 @@ class AppSettings {
   final int roomSyncStaleMinutes;
   final String defaultRadioProfile;
   final bool contactsCompactView;
+  final bool defaultMessageScopeEnabled;
+  final String defaultMessageScopeTag;
   final bool autoReconnectEnabled;
 
   AppSettings({
@@ -60,6 +62,8 @@ class AppSettings {
     this.roomSyncStaleMinutes = 15,
     this.defaultRadioProfile = 'region_auto',
     this.contactsCompactView = false,
+    this.defaultMessageScopeEnabled = false,
+    this.defaultMessageScopeTag = '',
     this.autoReconnectEnabled = true,
   }) : batteryChemistryByDeviceId = batteryChemistryByDeviceId ?? {};
 
@@ -93,6 +97,8 @@ class AppSettings {
       'room_sync_stale_minutes': roomSyncStaleMinutes,
       'default_radio_profile': defaultRadioProfile,
       'contacts_compact_view': contactsCompactView,
+      'default_message_scope_enabled': defaultMessageScopeEnabled,
+      'default_message_scope_tag': defaultMessageScopeTag,
       'auto_reconnect_enabled': autoReconnectEnabled,
     };
   }
@@ -139,6 +145,10 @@ class AppSettings {
       defaultRadioProfile:
           json['default_radio_profile'] as String? ?? 'region_auto',
       contactsCompactView: json['contacts_compact_view'] as bool? ?? false,
+      defaultMessageScopeEnabled:
+          json['default_message_scope_enabled'] as bool? ?? false,
+      defaultMessageScopeTag:
+          json['default_message_scope_tag'] as String? ?? '',
       autoReconnectEnabled: json['auto_reconnect_enabled'] as bool? ?? true,
     );
   }
@@ -172,6 +182,8 @@ class AppSettings {
     int? roomSyncStaleMinutes,
     String? defaultRadioProfile,
     bool? contactsCompactView,
+    bool? defaultMessageScopeEnabled,
+    String? defaultMessageScopeTag,
     bool? autoReconnectEnabled,
   }) {
     return AppSettings(
@@ -214,6 +226,10 @@ class AppSettings {
       roomSyncStaleMinutes: roomSyncStaleMinutes ?? this.roomSyncStaleMinutes,
       defaultRadioProfile: defaultRadioProfile ?? this.defaultRadioProfile,
       contactsCompactView: contactsCompactView ?? this.contactsCompactView,
+      defaultMessageScopeEnabled:
+          defaultMessageScopeEnabled ?? this.defaultMessageScopeEnabled,
+      defaultMessageScopeTag:
+          defaultMessageScopeTag ?? this.defaultMessageScopeTag,
       autoReconnectEnabled: autoReconnectEnabled ?? this.autoReconnectEnabled,
     );
   }
