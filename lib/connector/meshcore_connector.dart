@@ -173,6 +173,8 @@ class MeshCoreConnector extends ChangeNotifier {
   final Set<String> _knownContactKeys = {};
   final Set<String> _knownDiscoveredNodeKeys = {};
   final Map<String, int> _contactUnreadCount = {};
+  final Map<String, int> _contactLastReadTs = {};
+  final Map<int, int> _channelLastReadTs = {};
   bool _unreadStateLoaded = false;
   final Map<String, _RepeaterAckContext> _pendingRepeaterAcks = {};
   String? _activeContactKey;
@@ -357,6 +359,11 @@ class MeshCoreConnector extends ChangeNotifier {
     return _contactUnreadCount[contactKeyHex] ?? 0;
   }
 
+  int? contactLastReadTimestamp(String contactKeyHex) {
+    if (!_unreadStateLoaded) return null;
+    return _contactLastReadTs[contactKeyHex];
+  }
+
   int getUnreadCountForChannel(Channel channel) {
     return getUnreadCountForChannelIndex(channel.index);
   }
@@ -364,6 +371,53 @@ class MeshCoreConnector extends ChangeNotifier {
   int getUnreadCountForChannelIndex(int channelIndex) {
     if (!_unreadStateLoaded) return 0;
     return _findChannelByIndex(channelIndex)?.unreadCount ?? 0;
+  }
+
+  int? channelLastReadTimestamp(int channelIndex) {
+    if (!_unreadStateLoaded) return null;
+    return _channelLastReadTs[channelIndex];
+  }
+
+  int? firstUnreadContactIndex(
+    String contactKeyHex,
+    List<Message> orderedMessages,
+  ) {
+    if (orderedMessages.isEmpty) return null;
+
+    final marker = _contactLastReadTs[contactKeyHex];
+    if (marker != null) {
+      final markerIndex = orderedMessages.indexWhere(
+        (m) => m.timestamp.millisecondsSinceEpoch > marker,
+      );
+      if (markerIndex >= 0) return markerIndex;
+      return null;
+    }
+
+    final unreadCount = getUnreadCountForContactKey(contactKeyHex);
+    if (unreadCount <= 0) return null;
+    if (unreadCount >= orderedMessages.length) return 0;
+    return orderedMessages.length - unreadCount;
+  }
+
+  int? firstUnreadChannelIndex(
+    int channelIndex,
+    List<ChannelMessage> orderedMessages,
+  ) {
+    if (orderedMessages.isEmpty) return null;
+
+    final marker = _channelLastReadTs[channelIndex];
+    if (marker != null) {
+      final markerIndex = orderedMessages.indexWhere(
+        (m) => m.timestamp.millisecondsSinceEpoch > marker,
+      );
+      if (markerIndex >= 0) return markerIndex;
+      return null;
+    }
+
+    final unreadCount = getUnreadCountForChannelIndex(channelIndex);
+    if (unreadCount <= 0) return null;
+    if (unreadCount >= orderedMessages.length) return 0;
+    return orderedMessages.length - unreadCount;
   }
 
   int getTotalUnreadCount() {
@@ -396,6 +450,12 @@ class MeshCoreConnector extends ChangeNotifier {
     _contactUnreadCount
       ..clear()
       ..addAll(await _unreadStore.loadContactUnreadCount());
+    _contactLastReadTs
+      ..clear()
+      ..addAll(await _unreadStore.loadContactLastReadTs());
+    _channelLastReadTs
+      ..clear()
+      ..addAll(await _unreadStore.loadChannelLastReadTs());
     _unreadStateLoaded = true;
     notifyListeners();
   }
@@ -425,7 +485,12 @@ class MeshCoreConnector extends ChangeNotifier {
 
   void markContactRead(String contactKeyHex) {
     if (!_shouldTrackUnreadForContactKey(contactKeyHex)) return;
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    _contactLastReadTs[contactKeyHex] = nowMs;
     final previousCount = _contactUnreadCount[contactKeyHex] ?? 0;
+    _unreadStore.saveContactLastReadTs(
+      Map<String, int>.from(_contactLastReadTs),
+    );
     if (previousCount > 0) {
       _contactUnreadCount[contactKeyHex] = 0;
       _appDebugLogService?.info(
@@ -440,6 +505,8 @@ class MeshCoreConnector extends ChangeNotifier {
   }
 
   void markChannelRead(int channelIndex) {
+    _channelLastReadTs[channelIndex] = DateTime.now().millisecondsSinceEpoch;
+    _unreadStore.saveChannelLastReadTs(Map<int, int>.from(_channelLastReadTs));
     final channel = _findChannelByIndex(channelIndex);
     if (channel != null && channel.unreadCount > 0) {
       final previousCount = channel.unreadCount;
@@ -1621,8 +1688,12 @@ class MeshCoreConnector extends ChangeNotifier {
     _conversations.remove(contact.publicKeyHex);
     _loadedConversationKeys.remove(contact.publicKeyHex);
     _contactUnreadCount.remove(contact.publicKeyHex);
+    _contactLastReadTs.remove(contact.publicKeyHex);
     _unreadStore.saveContactUnreadCount(
       Map<String, int>.from(_contactUnreadCount),
+    );
+    _unreadStore.saveContactLastReadTs(
+      Map<String, int>.from(_contactLastReadTs),
     );
     _messageStore.clearMessages(contact.publicKeyHex);
     notifyListeners();
@@ -1940,6 +2011,8 @@ class MeshCoreConnector extends ChangeNotifier {
     await _channelMessageStore.clearChannelMessages(index);
     // Clear in-memory messages for this channel
     _channelMessages.remove(index);
+    _channelLastReadTs.remove(index);
+    _unreadStore.saveChannelLastReadTs(Map<int, int>.from(_channelLastReadTs));
     // Refresh channels after deleting
     await getChannels(force: true);
   }
