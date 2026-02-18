@@ -13,6 +13,11 @@ This workspace contains three directories. They are NOT interchangeable:
 - **meshcore-open-pr173/** (and similar pr directories) — Small, single-feature branches created from unified for submitting PRs. Each PR branch isolates one feature for review.
 - **meshcore-open/** — The PUBLIC upstream repository. DO NOT TOUCH. This is only updated when PRs are merged upstream. Never edit, commit, or modify anything in this directory.
 
+## Git Push Default
+
+- In this workspace, when the user asks to "push" without a target branch, default to pushing to `feature/unified-all-changes` on `origin`.
+- Ask before pushing if the local branch is not `feature/unified-all-changes` or if pushing would require a force push.
+
 ## Commit Discipline
 
 - Commit after every successful build. If flutter build apk --debug succeeds, commit immediately before moving on.
