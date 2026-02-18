@@ -23,6 +23,7 @@ import '../widgets/unread_badge.dart';
 import 'channel_chat_screen.dart';
 import 'community_qr_scanner_screen.dart';
 import 'contacts_screen.dart';
+import 'discovered_nodes_screen.dart';
 import 'map_screen.dart';
 import 'settings_screen.dart';
 
@@ -116,7 +117,11 @@ class _ChannelsScreenState extends State<ChannelsScreen>
       canPop: allowBack,
       child: Scaffold(
         appBar: AppBar(
-          leading: BatteryIndicator(connector: connector),
+          leadingWidth: 180,
+          leading: BatteryIndicator(
+            connector: connector,
+            showCompanionName: true,
+          ),
           title: Text(context.l10n.channels_title),
           centerTitle: true,
           automaticallyImplyLeading: false,
@@ -525,6 +530,12 @@ class _ChannelsScreenState extends State<ChannelsScreen>
         );
         break;
       case 2:
+        Navigator.pushReplacement(
+          context,
+          buildQuickSwitchRoute(const DiscoveredNodesScreen(hideBackButton: true)),
+        );
+        break;
+      case 3:
         Navigator.pushReplacement(
           context,
           buildQuickSwitchRoute(const MapScreen(hideBackButton: true)),

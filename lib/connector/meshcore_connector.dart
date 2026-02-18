@@ -240,6 +240,7 @@ class MeshCoreConnector extends ChangeNotifier {
   int get maxChannels => _maxChannels;
   int? get deviceProtocolVersion => _deviceProtocolVersion;
   bool get supportsFloodScope => (_deviceProtocolVersion ?? 0) >= 8;
+  String? get activeFloodScopeTag => _activeFloodScopeTag;
   bool get isSyncingQueuedMessages => _isSyncingQueuedMessages;
   bool get isSyncingChannels => _isSyncingChannels;
   int get channelSyncProgress =>

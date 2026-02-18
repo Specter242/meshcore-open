@@ -40,6 +40,7 @@ class _DeviceScreenState extends State<DeviceScreen>
           canPop: false,
           child: Scaffold(
             appBar: AppBar(
+              leadingWidth: 180,
               leading: _buildBatteryIndicator(connector, context),
               titleSpacing: 16,
               centerTitle: false,

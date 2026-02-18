@@ -27,6 +27,7 @@ import '../services/room_sync_service.dart';
 import '../services/app_settings_service.dart';
 import 'channels_screen.dart';
 import 'chat_screen.dart';
+import 'discovered_nodes_screen.dart';
 import 'map_screen.dart';
 import 'repeater_hub_screen.dart';
 import 'settings_screen.dart';
@@ -231,7 +232,11 @@ class _ContactsScreenState extends State<ContactsScreen>
       canPop: allowBack,
       child: Scaffold(
         appBar: AppBar(
-          leading: BatteryIndicator(connector: connector),
+          leadingWidth: 180,
+          leading: BatteryIndicator(
+            connector: connector,
+            showCompanionName: true,
+          ),
           title: Text(context.l10n.contacts_title),
           centerTitle: true,
           automaticallyImplyLeading: false,
@@ -678,6 +683,12 @@ class _ContactsScreenState extends State<ContactsScreen>
         );
         break;
       case 2:
+        Navigator.pushReplacement(
+          context,
+          buildQuickSwitchRoute(const DiscoveredNodesScreen(hideBackButton: true)),
+        );
+        break;
+      case 3:
         Navigator.pushReplacement(
           context,
           buildQuickSwitchRoute(const MapScreen(hideBackButton: true)),

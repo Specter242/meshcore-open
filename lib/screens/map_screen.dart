@@ -19,6 +19,7 @@ import '../widgets/battery_indicator.dart';
 import '../widgets/quick_switch_bar.dart';
 import 'channels_screen.dart';
 import 'chat_screen.dart';
+import 'discovered_nodes_screen.dart';
 import 'contacts_screen.dart';
 import '../widgets/repeater_login_dialog.dart';
 import '../widgets/room_login_dialog.dart';
@@ -243,7 +244,11 @@ class _MapScreenState extends State<MapScreen> {
           canPop: allowBack,
           child: Scaffold(
             appBar: AppBar(
-              leading: BatteryIndicator(connector: connector),
+              leadingWidth: 180,
+              leading: BatteryIndicator(
+                connector: connector,
+                showCompanionName: true,
+              ),
               title: Text(context.l10n.map_title),
               centerTitle: true,
               automaticallyImplyLeading: false,
@@ -397,7 +402,7 @@ class _MapScreenState extends State<MapScreen> {
             bottomNavigationBar: SafeArea(
               top: false,
               child: QuickSwitchBar(
-                selectedIndex: 2,
+                selectedIndex: 3,
                 onDestinationSelected: (index) =>
                     _handleQuickSwitch(index, context),
               ),
@@ -851,7 +856,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _handleQuickSwitch(int index, BuildContext context) {
-    if (index == 2) return;
+    if (index == 3) return;
     switch (index) {
       case 0:
         Navigator.pushReplacement(
@@ -863,6 +868,12 @@ class _MapScreenState extends State<MapScreen> {
         Navigator.pushReplacement(
           context,
           buildQuickSwitchRoute(const ChannelsScreen(hideBackButton: true)),
+        );
+        break;
+      case 2:
+        Navigator.pushReplacement(
+          context,
+          buildQuickSwitchRoute(const DiscoveredNodesScreen(hideBackButton: true)),
         );
         break;
     }

@@ -170,4 +170,12 @@ class AppSettingsService extends ChangeNotifier {
   Future<void> setAutoReconnectEnabled(bool value) async {
     await updateSettings(_settings.copyWith(autoReconnectEnabled: value));
   }
+
+  Future<void> setDefaultMessageScopeEnabled(bool value) async {
+    await updateSettings(_settings.copyWith(defaultMessageScopeEnabled: value));
+  }
+
+  Future<void> setDefaultMessageScopeTag(String value) async {
+    await updateSettings(_settings.copyWith(defaultMessageScopeTag: value));
+  }
 }

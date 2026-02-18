@@ -1,0 +1,34 @@
+---
+description: Workspace branch conventions and commit discipline for MeshCore Localization
+alwaysApply: true
+---
+
+# Workspace Conventions
+
+## Branch Structure
+
+This workspace contains three directories. They are NOT interchangeable:
+
+- **meshcore-open-unified/** — The active working branch with the most changes. ALL feature development and improvements happen here. This is the only directory you should be editing.
+- **meshcore-open-pr173/** (and similar pr directories) — Small, single-feature branches created from unified for submitting PRs. Each PR branch isolates one feature for review.
+- **meshcore-open/** — The PUBLIC upstream repository. DO NOT TOUCH. This is only updated when PRs are merged upstream. Never edit, commit, or modify anything in this directory.
+
+## Commit Discipline
+
+- Commit after every successful build. If flutter build apk --debug succeeds, commit immediately before moving on.
+- Commit before starting a new feature. The working tree should be clean when beginning new work.
+- Never leave broken code uncommitted overnight. If something does not compile, either fix it or stash it.
+- Use descriptive commit messages that name the feature or fix, not "WIP" or "updates".
+
+## Build and Deploy
+
+- Always build and test on the meshcore-open-unified/ directory.
+- Use flutter build apk --debug then flutter install to deploy to the connected phone.
+- Verify dart analyze lib/ passes with zero errors before committing.
+
+## Feature Work
+
+- Develop features directly in meshcore-open-unified/.
+- When a feature is complete and tested, create a separate PR branch (meshcore-open-prNNN/) with just that feature changes isolated.
+- Do NOT refactor or restructure code unrelated to the current task.
+- Keep changes minimal and focused on the requested feature.

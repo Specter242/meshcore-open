@@ -188,7 +188,9 @@ class Contact {
           )
         : Uint8List(0);
     final name = readCString(data, contactNameOffset, maxNameSize);
+    final timestamp = readUint32LE(data, contactTimestampOffset);
     final lastmod = readUint32LE(data, contactLastmodOffset);
+    final lastSeenSeconds = timestamp > 0 ? timestamp : lastmod;
 
     double? lat, lon;
     final latRaw = readInt32LE(data, contactLatOffset);
@@ -207,7 +209,8 @@ class Contact {
       path: pathBytes,
       latitude: lat,
       longitude: lon,
-      lastSeen: DateTime.fromMillisecondsSinceEpoch(lastmod * 1000),
+      lastSeen: DateTime.fromMillisecondsSinceEpoch(lastSeenSeconds * 1000),
+      lastModified: DateTime.fromMillisecondsSinceEpoch(lastmod * 1000),
     );
   }
 

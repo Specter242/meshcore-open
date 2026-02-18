@@ -352,6 +352,36 @@ class AppSettingsScreen extends StatelessWidget {
           ),
           const Divider(height: 1),
           SwitchListTile(
+            secondary: const Icon(Icons.alternate_email_outlined),
+            title: const Text('Default message scope'),
+            subtitle: const Text(
+              'Apply a scope token when a message has no @scope tag.',
+            ),
+            value: settingsService.settings.defaultMessageScopeEnabled,
+            onChanged: (value) {
+              settingsService.setDefaultMessageScopeEnabled(value);
+            },
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.tag_outlined),
+            title: const Text('Default scope tag'),
+            subtitle: Text(
+              settingsService.settings.defaultMessageScopeTag.trim().isEmpty
+                  ? '@global'
+                  : settingsService.settings.defaultMessageScopeTag.trim(),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _editTextSetting(
+              context: context,
+              title: 'Default scope tag',
+              initialValue: settingsService.settings.defaultMessageScopeTag,
+              helperText: 'Examples: @global, @local, @group:region',
+              onSave: settingsService.setDefaultMessageScopeTag,
+            ),
+          ),
+          const Divider(height: 1),
+          SwitchListTile(
             secondary: const Icon(Icons.view_agenda_outlined),
             title: const Text('Compact contacts view'),
             subtitle: const Text(
@@ -944,6 +974,43 @@ class AppSettingsScreen extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(context.l10n.common_close),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editTextSetting({
+    required BuildContext context,
+    required String title,
+    required String initialValue,
+    String? helperText,
+    required Future<void> Function(String) onSave,
+  }) {
+    final controller = TextEditingController(text: initialValue);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
+            helperText: helperText,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(context.l10n.common_cancel),
+          ),
+          TextButton(
+            onPressed: () async {
+              await onSave(controller.text.trim());
+              if (!context.mounted) return;
+              Navigator.pop(context);
+            },
+            child: Text(context.l10n.common_save),
           ),
         ],
       ),

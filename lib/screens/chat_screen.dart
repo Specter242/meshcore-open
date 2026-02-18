@@ -5,16 +5,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:meshcore_open/screens/path_trace_map.dart';
 import 'package:provider/provider.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../connector/meshcore_connector.dart';
 import '../connector/meshcore_protocol.dart';
+import '../helpers/message_scope_helper.dart';
 import '../helpers/reaction_helper.dart';
 import '../helpers/chat_scroll_controller.dart';
-import '../helpers/link_handler.dart';
 import '../helpers/utf8_length_limiter.dart';
 import '../models/channel_message.dart';
 import '../models/contact.dart';
@@ -27,6 +26,7 @@ import '../utils/emoji_utils.dart';
 import '../widgets/emoji_picker.dart';
 import '../widgets/gif_message.dart';
 import '../widgets/jump_to_bottom_button.dart';
+import '../widgets/scope_linkify.dart';
 import '../widgets/gif_picker.dart';
 import '../widgets/path_selection_dialog.dart';
 import '../utils/app_logger.dart';
@@ -45,6 +45,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _textController = TextEditingController();
   final _scrollController = ChatScrollController();
   final _textFieldFocusNode = FocusNode();
+  List<String> _scopeSuggestions = const [];
   bool _isLoadingOlder = false;
   MeshCoreConnector? _connector;
 
@@ -52,6 +53,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     _textFieldFocusNode.addListener(_onTextFieldFocusChange);
+    _textController.addListener(_onComposeTextChanged);
     _scrollController.onScrollNearTop = _loadOlderMessages;
     SchedulerBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -82,6 +84,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     _connector?.setActiveContact(null);
     _textFieldFocusNode.removeListener(_onTextFieldFocusChange);
+    _textController.removeListener(_onComposeTextChanged);
     _textFieldFocusNode.dispose();
     _textController.dispose();
     _scrollController.dispose();
@@ -324,6 +327,58 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Widget _buildScopeBadge(MeshCoreConnector connector) {
+    final text = _textController.text;
+    final parsed = MessageScopeHelper.parseFirstScopeToken(text);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    String? label;
+    if (parsed != null) {
+      label = '@${parsed.rawToken}';
+    } else if (connector.activeFloodScopeTag != null) {
+      label = '${connector.activeFloodScopeTag} (default)';
+    }
+    if (label == null) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.language, size: 16, color: colorScheme.onPrimaryContainer),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'Scope: $label',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onPrimaryContainer,
+              ),
+            ),
+          ),
+          if (parsed != null)
+            GestureDetector(
+              onTap: () {
+                final t = _textController.text;
+                final cleaned = t.replaceFirst(RegExp(r'@\S+\s?'), '');
+                _textController.value = TextEditingValue(
+                  text: cleaned,
+                  selection: TextSelection.collapsed(offset: cleaned.length),
+                );
+              },
+              child: Icon(Icons.close, size: 16, color: colorScheme.onPrimaryContainer),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInputBar(MeshCoreConnector connector) {
     final maxBytes = maxContactMessageBytes();
     final colorScheme = Theme.of(context).colorScheme;
@@ -334,70 +389,94 @@ class _ChatScreenState extends State<ChatScreen> {
         border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
       ),
       child: SafeArea(
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              icon: const Icon(Icons.gif_box),
-              onPressed: () => _showGifPicker(context),
-              tooltip: context.l10n.chat_sendGif,
-            ),
-            Expanded(
-              child: ValueListenableBuilder<TextEditingValue>(
-                valueListenable: _textController,
-                builder: (context, value, child) {
-                  final gifId = _parseGifId(value.text);
-                  if (gifId != null) {
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: GifMessage(
-                              url:
-                                  'https://media.giphy.com/media/$gifId/giphy.gif',
-                              backgroundColor:
-                                  colorScheme.surfaceContainerHighest,
-                              fallbackTextColor: colorScheme.onSurface
-                                  .withValues(alpha: 0.6),
-                              maxSize: 160,
+            _buildScopeBadge(connector),
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.gif_box),
+                  onPressed: () => _showGifPicker(context),
+                  tooltip: context.l10n.chat_sendGif,
+                ),
+                Expanded(
+                  child: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _textController,
+                    builder: (context, value, child) {
+                      final gifId = _parseGifId(value.text);
+                      if (gifId != null) {
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: GifMessage(
+                                  url:
+                                      'https://media.giphy.com/media/$gifId/giphy.gif',
+                                  backgroundColor:
+                                      colorScheme.surfaceContainerHighest,
+                                  fallbackTextColor: colorScheme.onSurface
+                                      .withValues(alpha: 0.6),
+                                  maxSize: 160,
+                                ),
+                              ),
                             ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () => _textController.clear(),
+                            ),
+                          ],
+                        );
+                      }
+
+                      return TextField(
+                        controller: _textController,
+                        focusNode: _textFieldFocusNode,
+                        inputFormatters: [
+                          Utf8LengthLimitingTextInputFormatter(maxBytes),
+                        ],
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: InputDecoration(
+                          hintText: context.l10n.chat_typeMessage,
+                          border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => _textController.clear(),
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _sendMessage(connector),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  icon: const Icon(Icons.send),
+                  onPressed: () => _sendMessage(connector),
+                ),
+              ],
+            ),
+            if (_scopeSuggestions.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: _scopeSuggestions
+                      .map(
+                        (entry) => ActionChip(
+                          label: Text(entry),
+                          onPressed: () => _applyScopeSuggestion(entry),
                         ),
-                      ],
-                    );
-                  }
-
-                  return TextField(
-                    controller: _textController,
-                    focusNode: _textFieldFocusNode,
-                    inputFormatters: [
-                      Utf8LengthLimitingTextInputFormatter(maxBytes),
-                    ],
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: InputDecoration(
-                      hintText: context.l10n.chat_typeMessage,
-                      border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _sendMessage(connector),
-                  );
-                },
+                      )
+                      .toList(),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            IconButton.filled(
-              icon: const Icon(Icons.send),
-              onPressed: () => _sendMessage(connector),
-            ),
+            ],
           ],
         ),
       ),
@@ -419,6 +498,56 @@ class _ChatScreenState extends State<ChatScreen> {
           _textController.text = 'g:$gifId';
         },
       ),
+    );
+  }
+
+  void _onComposeTextChanged() {
+    final value = _textController.value;
+    final cursor = value.selection.baseOffset;
+    if (cursor < 0) {
+      if (_scopeSuggestions.isNotEmpty) {
+        setState(() => _scopeSuggestions = const []);
+      }
+      return;
+    }
+
+    final word = _currentWordAtCursor(value.text, cursor);
+    if (!word.startsWith('@')) {
+      if (_scopeSuggestions.isNotEmpty) {
+        setState(() => _scopeSuggestions = const []);
+      }
+      return;
+    }
+
+    final suggestions = MessageScopeHelper.suggestionsForQuery(word);
+    if (listEquals(suggestions, _scopeSuggestions)) return;
+    setState(() => _scopeSuggestions = suggestions);
+  }
+
+  String _currentWordAtCursor(String text, int cursor) {
+    final safeCursor = cursor.clamp(0, text.length);
+    var start = safeCursor;
+    while (start > 0 && text[start - 1] != ' ' && text[start - 1] != '\n') {
+      start--;
+    }
+    return text.substring(start, safeCursor);
+  }
+
+  void _applyScopeSuggestion(String suggestion) {
+    final value = _textController.value;
+    final cursor = value.selection.baseOffset;
+    if (cursor < 0) return;
+    final text = value.text;
+    final safeCursor = cursor.clamp(0, text.length);
+    var start = safeCursor;
+    while (start > 0 && text[start - 1] != ' ' && text[start - 1] != '\n') {
+      start--;
+    }
+    final newText =
+        '${text.substring(0, start)}$suggestion ${text.substring(safeCursor)}';
+    _textController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: start + suggestion.length + 1),
     );
   }
 
@@ -1216,20 +1345,9 @@ class _MessageBubble extends StatelessWidget {
                             ),
                           )
                         else
-                          Linkify(
+                          ScopeLinkify(
                             text: messageText,
                             style: TextStyle(color: textColor),
-                            linkStyle: const TextStyle(
-                              color: Colors.green,
-                              decoration: TextDecoration.underline,
-                            ),
-                            options: const LinkifyOptions(
-                              humanize: false,
-                              defaultToHttps: false,
-                            ),
-                            linkifiers: const [UrlLinkifier()],
-                            onOpen: (link) =>
-                                LinkHandler.handleLinkTap(context, link.url),
                           ),
                         if (isOutgoing && message.retryCount > 0) ...[
                           const SizedBox(height: 4),

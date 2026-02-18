@@ -32,3 +32,15 @@
 
 ## Commit & Pull Request Guidelines
 - Keep commit subjects short and action-focused; PRs should describe behavior changes, link issues, include screenshots for UI changes, and call out BLE protocol changes explicitly.
+
+## Branch & Build Workflow Rules
+- Default local builds (especially phone installs) must use the most up-to-date local working branch with all current work integrated.
+- Track individual PRs from their PR branch.
+- When PR follow-up fixes are completed, roll those changes into the unified branch so unified stays current.
+- Unless explicitly requested to test a different branch, do not install/build from older or isolated branches.
+
+## Documentation Maintenance
+- After each completed task, update project documentation when behavior, UX, protocol usage, or workflow changes.
+- At minimum, update one of: `README.md`, `docs/ROOM_SYNC.md`, `docs/BLE_PROTOCOL.md`, or `docs/ISSUE_UPDATES.md`, depending on scope.
+- For issue-driven work, record the issue number, summary of the final behavior, and any important constraints in `docs/ISSUE_UPDATES.md`.
+- If there is no user-visible or developer-visible change, explicitly note that no documentation update was needed in the PR description.
