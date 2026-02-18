@@ -28,8 +28,13 @@ BatteryUi batteryUiForPercent(int? percent) {
 
 class BatteryIndicator extends StatefulWidget {
   final MeshCoreConnector connector;
+  final bool showCompanionName;
 
-  const BatteryIndicator({super.key, required this.connector});
+  const BatteryIndicator({
+    super.key,
+    required this.connector,
+    this.showCompanionName = false,
+  });
 
   @override
   State<BatteryIndicator> createState() => _BatteryIndicatorState();
@@ -53,8 +58,15 @@ class _BatteryIndicatorState extends State<BatteryIndicator> {
     } else {
       displayText = percent != null ? '$percent%' : '—';
     }
+    final companionName = widget.connector.deviceDisplayName.trim();
+    final label = widget.showCompanionName && companionName.isNotEmpty
+        ? '$companionName  $displayText'
+        : displayText;
 
     final batteryUi = batteryUiForPercent(percent);
+    final icon = widget.connector.isCompanionCharging == true
+        ? Icons.battery_charging_full
+        : batteryUi.icon;
 
     return InkWell(
       onTap: () {
@@ -68,17 +80,17 @@ class _BatteryIndicatorState extends State<BatteryIndicator> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(batteryUi.icon, size: 18, color: batteryUi.color),
+            Icon(icon, size: 18, color: batteryUi.color),
             const SizedBox(width: 2),
             Flexible(
               child: Text(
-                displayText,
+                label,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                   color: batteryUi.color,
                 ),
-                overflow: TextOverflow.visible,
+                overflow: TextOverflow.ellipsis,
                 maxLines: 1,
                 softWrap: false,
               ),

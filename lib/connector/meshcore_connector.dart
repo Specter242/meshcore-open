@@ -110,6 +110,7 @@ class MeshCoreConnector extends ChangeNotifier {
   int? _currentSf;
   int? _currentCr;
   int? _batteryMillivolts;
+  bool? _isCompanionCharging;
   double? _selfLatitude;
   double? _selfLongitude;
   bool _isLoadingContacts = false;
@@ -222,6 +223,7 @@ class MeshCoreConnector extends ChangeNotifier {
   int? get currentCr => _currentCr;
   Map<String, String>? get currentCustomVars => _currentCustomVars;
   int? get batteryMillivolts => _batteryMillivolts;
+  bool? get isCompanionCharging => _isCompanionCharging;
   int get maxContacts => _maxContacts;
   int get maxChannels => _maxChannels;
   bool get isSyncingQueuedMessages => _isSyncingQueuedMessages;
@@ -1052,6 +1054,7 @@ class MeshCoreConnector extends ChangeNotifier {
     _selfLatitude = null;
     _selfLongitude = null;
     _batteryMillivolts = null;
+    _isCompanionCharging = null;
     _batteryRequested = false;
     _awaitingSelfInfo = false;
     _maxContacts = _defaultMaxContacts;
@@ -2140,11 +2143,18 @@ class MeshCoreConnector extends ChangeNotifier {
     // [1-2] = battery_mv (uint16 LE)
     // [3-6] = storage_used_kb (uint32 LE)
     // [7-10] = storage_total_kb (uint32 LE)
+    // [11] = is_charging (uint8, optional: 0/1)
     if (frame.length >= 3) {
       _batteryMillivolts = readUint16LE(frame, 1);
+      _isCompanionCharging = frame.length >= 12 ? frame[11] == 1 : null;
       final volts = (_batteryMillivolts! / 1000.0).toStringAsFixed(2);
       _appDebugLogService?.info(
-        'Pulled battery: $volts V ($_batteryMillivolts mV)',
+        'Pulled battery: $volts V ($_batteryMillivolts mV) '
+        'charging=${_isCompanionCharging == true
+            ? "yes"
+            : _isCompanionCharging == false
+            ? "no"
+            : "unknown"}',
         tag: 'Battery',
       );
       notifyListeners();
