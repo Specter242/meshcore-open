@@ -8,6 +8,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../models/channel.dart';
 import '../models/channel_message.dart';
+import '../models/channel_notification_mode.dart';
 import '../models/contact.dart';
 import '../models/message.dart';
 import '../models/path_selection.dart';
@@ -167,6 +168,7 @@ class MeshCoreConnector extends ChangeNotifier {
   final UnreadStore _unreadStore = UnreadStore();
   List<Channel> _cachedChannels = [];
   final Map<int, bool> _channelSmazEnabled = {};
+  final Map<int, ChannelNotificationMode> _channelNotificationModes = {};
   bool _lastSentWasCliCommand =
       false; // Track if last sent message was a CLI command
   final Map<String, bool> _contactSmazEnabled = {};
@@ -652,10 +654,27 @@ class MeshCoreConnector extends ChangeNotifier {
 
   Future<void> loadChannelSettings({int? maxChannels}) async {
     _channelSmazEnabled.clear();
+    _channelNotificationModes.clear();
     final channelCount = maxChannels ?? _maxChannels;
     for (int i = 0; i < channelCount; i++) {
       _channelSmazEnabled[i] = await _channelSettingsStore.loadSmazEnabled(i);
+      _channelNotificationModes[i] = await _channelSettingsStore
+          .loadNotificationMode(i);
     }
+  }
+
+  ChannelNotificationMode channelNotificationModeFor(int channelIndex) {
+    return _channelNotificationModes[channelIndex] ??
+        ChannelNotificationMode.all;
+  }
+
+  Future<void> setChannelNotificationMode(
+    int channelIndex,
+    ChannelNotificationMode mode,
+  ) async {
+    _channelNotificationModes[channelIndex] = mode;
+    await _channelSettingsStore.saveNotificationMode(channelIndex, mode);
+    notifyListeners();
   }
 
   void _sendMessageDirect(
@@ -2862,6 +2881,14 @@ class MeshCoreConnector extends ChangeNotifier {
     if (!settings.notificationsEnabled || !settings.notifyOnNewChannelMessage) {
       return;
     }
+    final mode = channelNotificationModeFor(channelIndex);
+    if (mode == ChannelNotificationMode.none) {
+      return;
+    }
+    if (mode == ChannelNotificationMode.mentionsOnly &&
+        !_containsSelfMention(message.text)) {
+      return;
+    }
 
     final label = channelName ?? _channelDisplayName(channelIndex);
     _notificationService.showChannelMessageNotification(
@@ -2870,6 +2897,25 @@ class MeshCoreConnector extends ChangeNotifier {
       channelIndex: channelIndex,
       badgeCount: getTotalUnreadCount(),
     );
+  }
+
+  bool _containsSelfMention(String text) {
+    final self = _selfName?.trim();
+    if (self == null || self.isEmpty) return false;
+    final escaped = RegExp.escape(self);
+    final atMention = RegExp(
+      '(^|\\W)@$escaped'
+      r'(\W|$)',
+      caseSensitive: false,
+    );
+    if (atMention.hasMatch(text)) return true;
+
+    final plainMention = RegExp(
+      '(^|\\W)$escaped'
+      r'(\W|$)',
+      caseSensitive: false,
+    );
+    return plainMention.hasMatch(text);
   }
 
   void _handleIncomingChannelMessage(Uint8List frame) {
