@@ -129,7 +129,7 @@ class RoomSyncService extends ChangeNotifier {
     _lastConnectionState = state;
     if (state == MeshCoreConnectionState.connected) {
       _onConnected();
-    } else if (state == MeshCoreConnectionState.disconnected) {
+    } else {
       _onDisconnected();
     }
   }
@@ -360,8 +360,10 @@ class RoomSyncService extends ChangeNotifier {
     if (!_roomSyncEnabled) return RoomSyncStatus.off;
     if (!isRoomAutoSyncEnabled(roomPubKeyHex)) return RoomSyncStatus.disabled;
     if (_syncInFlight) return RoomSyncStatus.syncing;
+    final connector = _connector;
+    final isActivelyConnected = connector != null && connector.isConnected;
     final state = _states[roomPubKeyHex];
-    if (_activeRoomSessions.contains(roomPubKeyHex)) {
+    if (isActivelyConnected && _activeRoomSessions.contains(roomPubKeyHex)) {
       if (state?.lastSuccessfulSyncAtMs == null) {
         return RoomSyncStatus.connectedWaiting;
       }
@@ -373,6 +375,17 @@ class RoomSyncService extends ChangeNotifier {
       return RoomSyncStatus.notLoggedIn;
     }
     return RoomSyncStatus.notSynced;
+  }
+
+  Future<void> registerManualRoomLogin(String roomPubKeyHex) async {
+    if (!isRoomAutoSyncEnabled(roomPubKeyHex)) return;
+    _activeRoomSessions.add(roomPubKeyHex);
+    _recordLoginSuccess(roomPubKeyHex);
+    await _persistStates();
+    notifyListeners();
+    if (_roomSyncEnabled) {
+      _scheduleNextSync(Duration.zero);
+    }
   }
 
   void _recordLoginAttempt(String roomPubKeyHex) {

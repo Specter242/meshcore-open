@@ -32,12 +32,16 @@
 
 ## Commit & Pull Request Guidelines
 - Keep commit subjects short and action-focused; PRs should describe behavior changes, link issues, include screenshots for UI changes, and call out BLE protocol changes explicitly.
+- Every PR must be associated with an issue number. If no issue exists (including feature requests), create an issue first and reference it in the PR description before submission.
+- For `gh pr comment`, avoid escaped `\n` text; post multiline comments via `--body-file` or a heredoc so line breaks render correctly.
 
 ## Branch & Build Workflow Rules
 - Default local builds (especially phone installs) must use the most up-to-date local working branch with all current work integrated.
 - Track individual PRs from their PR branch.
 - When PR follow-up fixes are completed, roll those changes into the unified branch so unified stays current.
 - Unless explicitly requested to test a different branch, do not install/build from older or isolated branches.
+- Android install flow must preserve app data by default: build first, then run `adb install -r <apk>`; do not use `flutter install` for device updates unless explicitly requested.
+- Never run Android build and install in parallel; always run sequentially (`build` finishes before `adb install -r`) to avoid installing stale APKs.
 
 ## Documentation Maintenance
 - After each completed task, update project documentation when behavior, UX, protocol usage, or workflow changes.

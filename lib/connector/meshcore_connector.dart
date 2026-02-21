@@ -70,6 +70,8 @@ class MeshCoreConnector extends ChangeNotifier {
   final List<Channel> _channels = [];
   final Map<String, List<Message>> _conversations = {};
   final Map<int, List<ChannelMessage>> _channelMessages = {};
+  final List<String> _pendingChannelSentQueue = [];
+  final List<String> _pendingChannelCommandAckQueue = [];
   final Set<String> _loadedConversationKeys = {};
   final Map<int, Set<String>> _processedChannelReactions =
       {}; // channelIndex -> Set of "targetHash_emoji"
@@ -1059,7 +1061,8 @@ class MeshCoreConnector extends ChangeNotifier {
 
       _passiveScanSubscription = FlutterBluePlus.scanResults.listen((results) {
         for (var result in results) {
-          final matchesId = _lastDeviceId != null &&
+          final matchesId =
+              _lastDeviceId != null &&
               result.device.remoteId.toString() == _lastDeviceId;
           final matchesName =
               result.device.platformName.startsWith("MeshCore-") ||
@@ -1070,8 +1073,10 @@ class MeshCoreConnector extends ChangeNotifier {
             debugPrint('[Reconnect] Phase 2: device found in scan, connecting');
             _stopPassiveScanning();
             _reconnectAttempts = 0;
-            connect(result.device, displayName: _lastDeviceDisplayName)
-                .catchError((_) {
+            connect(
+              result.device,
+              displayName: _lastDeviceDisplayName,
+            ).catchError((_) {
               // Connection failed, restart passive scanning
               _startPassiveScanning();
             });
@@ -1234,7 +1239,9 @@ class MeshCoreConnector extends ChangeNotifier {
             ? DateTime.now().difference(_lastResponseTime!)
             : _healthCheckInterval + _healthWatchdogTimeout;
         if (elapsed >= _healthCheckInterval + _healthWatchdogTimeout) {
-          debugPrint('[HealthMonitor] No response within watchdog window, treating as disconnected');
+          debugPrint(
+            '[HealthMonitor] No response within watchdog window, treating as disconnected',
+          );
           _handleDisconnection();
         }
       });
@@ -1259,7 +1266,8 @@ class MeshCoreConnector extends ChangeNotifier {
   }
 
   Duration get _adaptiveBatteryInterval {
-    final recentDisconnect = _lastDisconnectTime != null &&
+    final recentDisconnect =
+        _lastDisconnectTime != null &&
         DateTime.now().difference(_lastDisconnectTime!).inMinutes < 10;
 
     if (recentDisconnect) return const Duration(seconds: 60);
@@ -1686,6 +1694,8 @@ class MeshCoreConnector extends ChangeNotifier {
       channel.index,
     );
     _addChannelMessage(channel.index, message);
+    _pendingChannelSentQueue.add(message.messageId);
+    _pendingChannelCommandAckQueue.add(message.messageId);
     notifyListeners();
 
     final trimmed = text.trim();
@@ -2050,6 +2060,9 @@ class MeshCoreConnector extends ChangeNotifier {
     debugPrint('RX frame: code=$code len=${frame.length}');
 
     switch (code) {
+      case respCodeOk:
+        _handleOk();
+        break;
       case respCodeDeviceInfo:
         _handleDeviceInfo(frame);
         break;
@@ -2925,6 +2938,7 @@ class MeshCoreConnector extends ChangeNotifier {
       if (_shouldDropSelfChannelMessage(
         message.senderName,
         message.pathBytes,
+        pathLength: message.pathLength,
       )) {
         return;
       }
@@ -2975,7 +2989,12 @@ class MeshCoreConnector extends ChangeNotifier {
       final text = readCString(decrypted, 5, decrypted.length - 5);
       final parsed = _splitSenderText(text);
       final decodedText = Smaz.tryDecodePrefixed(parsed.text) ?? parsed.text;
-      if (_shouldDropSelfChannelMessage(parsed.senderName, packet.pathBytes)) {
+      final messagePathLength = packet.isFlood ? packet.pathBytes.length : 0;
+      if (_shouldDropSelfChannelMessage(
+        parsed.senderName,
+        packet.pathBytes,
+        pathLength: messagePathLength,
+      )) {
         return;
       }
 
@@ -2986,7 +3005,7 @@ class MeshCoreConnector extends ChangeNotifier {
         timestamp: DateTime.fromMillisecondsSinceEpoch(timestampRaw * 1000),
         isOutgoing: false,
         status: ChannelMessageStatus.sent,
-        pathLength: packet.isFlood ? packet.pathBytes.length : 0,
+        pathLength: messagePathLength,
         pathBytes: packet.pathBytes,
         channelIndex: channel.index,
       );
@@ -3034,15 +3053,25 @@ class MeshCoreConnector extends ChangeNotifier {
         return;
       }
 
-      if (_retryService != null) {
-        _retryService!.updateMessageFromSent(ackHash, timeoutMs);
-      }
-      _markMostRecentPendingChannelMessageSent();
-    } else {
-      // Fallback to old behavior
-      if (_markMostRecentPendingChannelMessageSent()) {
+      final retryService = _retryService;
+      if (retryService != null &&
+          retryService.updateMessageFromSent(
+            ackHash,
+            timeoutMs,
+            allowQueueFallback: false,
+          )) {
         return;
       }
+
+      if (_markNextPendingChannelMessageSent()) {
+        return;
+      }
+
+      if (retryService != null) {
+        retryService.updateMessageFromSent(ackHash, timeoutMs);
+      }
+    } else {
+      // Fallback to old behavior
       for (var messages in _conversations.values) {
         for (int i = messages.length - 1; i >= 0; i--) {
           if (messages[i].isOutgoing &&
@@ -3056,47 +3085,50 @@ class MeshCoreConnector extends ChangeNotifier {
     }
   }
 
-  bool _markMostRecentPendingChannelMessageSent() {
-    int? targetChannelIndex;
-    int? targetMessageIndex;
-    DateTime? newestTimestamp;
-
-    for (final entry in _channelMessages.entries) {
-      final messages = entry.value;
-      for (int i = messages.length - 1; i >= 0; i--) {
-        final message = messages[i];
-        if (!message.isOutgoing ||
-            message.status != ChannelMessageStatus.pending) {
-          continue;
-        }
-        if (newestTimestamp == null ||
-            message.timestamp.isAfter(newestTimestamp)) {
-          targetChannelIndex = entry.key;
-          targetMessageIndex = i;
-          newestTimestamp = message.timestamp;
-        }
-        // Iterating backwards means first match is newest for this channel.
-        break;
+  bool _markNextPendingChannelMessageSent() {
+    while (_pendingChannelSentQueue.isNotEmpty) {
+      final queuedMessageId = _pendingChannelSentQueue.removeAt(0);
+      if (_markPendingChannelMessageSentById(queuedMessageId)) {
+        return true;
       }
     }
+    return false;
+  }
 
-    if (targetChannelIndex == null || targetMessageIndex == null) {
-      return false;
+  bool _markPendingChannelMessageSentById(String messageId) {
+    for (final entry in _channelMessages.entries) {
+      final channelMessages = entry.value;
+      for (int i = channelMessages.length - 1; i >= 0; i--) {
+        final message = channelMessages[i];
+        if (message.messageId != messageId) {
+          continue;
+        }
+        if (!message.isOutgoing ||
+            message.status != ChannelMessageStatus.pending) {
+          return false;
+        }
+        channelMessages[i] = message.copyWith(
+          status: ChannelMessageStatus.sent,
+        );
+        _pendingChannelSentQueue.remove(messageId);
+        _pendingChannelCommandAckQueue.remove(messageId);
+        unawaited(
+          _channelMessageStore.saveChannelMessages(entry.key, channelMessages),
+        );
+        notifyListeners();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void _handleOk() {
+    if (_pendingChannelCommandAckQueue.isEmpty) {
+      return;
     }
 
-    final channelMessages = _channelMessages[targetChannelIndex]!;
-    final message = channelMessages[targetMessageIndex];
-    channelMessages[targetMessageIndex] = message.copyWith(
-      status: ChannelMessageStatus.sent,
-    );
-    unawaited(
-      _channelMessageStore.saveChannelMessages(
-        targetChannelIndex,
-        channelMessages,
-      ),
-    );
-    notifyListeners();
-    return true;
+    final queuedMessageId = _pendingChannelCommandAckQueue.removeAt(0);
+    _markPendingChannelMessageSentById(queuedMessageId);
   }
 
   void _handleSendConfirmed(Uint8List frame) {
@@ -3677,18 +3709,23 @@ class MeshCoreConnector extends ChangeNotifier {
         mergedPathBytes.length,
       );
       final newRepeatCount = existing.repeatCount + 1;
+      final promotedFromPending =
+          newRepeatCount == 1 &&
+          existing.status == ChannelMessageStatus.pending;
       messages[existingIndex] = existing.copyWith(
         repeatCount: newRepeatCount,
         pathLength: mergedPathLength,
         pathBytes: mergedPathBytes,
         pathVariants: mergedPathVariants,
         // Mark as sent when first repeat is heard
-        status:
-            newRepeatCount == 1 &&
-                existing.status == ChannelMessageStatus.pending
+        status: promotedFromPending
             ? ChannelMessageStatus.sent
             : existing.status,
       );
+      if (promotedFromPending) {
+        _pendingChannelSentQueue.remove(existing.messageId);
+        _pendingChannelCommandAckQueue.remove(existing.messageId);
+      }
     } else {
       messages.add(processedMessage);
     }
@@ -3771,7 +3808,11 @@ class MeshCoreConnector extends ChangeNotifier {
     return false;
   }
 
-  bool _shouldDropSelfChannelMessage(String senderName, Uint8List pathBytes) {
+  bool _shouldDropSelfChannelMessage(
+    String senderName,
+    Uint8List pathBytes, {
+    int? pathLength,
+  }) {
     final trimmed = senderName.trim();
     if (trimmed.isEmpty) return false;
 
@@ -3783,8 +3824,14 @@ class MeshCoreConnector extends ChangeNotifier {
 
     // Name matches - this is from self
     // Drop only if pathBytes is empty (direct broadcast)
-    // Keep if pathBytes has data (repeated through another node)
-    return pathBytes.isEmpty;
+    // Keep if pathBytes has data (repeated through another node).
+    if (pathBytes.isNotEmpty) return false;
+
+    // Some long payload frames report hop count but omit explicit path bytes.
+    // Treat positive path_length as relayed so repeats are still tracked.
+    if (pathLength != null && pathLength > 0) return false;
+
+    return true;
   }
 
   Uint8List _selectPreferredPathBytes(Uint8List existing, Uint8List incoming) {
