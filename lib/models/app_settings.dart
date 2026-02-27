@@ -1,16 +1,3 @@
-enum UnitSystem { metric, imperial }
-
-extension UnitSystemValue on UnitSystem {
-  String get value {
-    switch (this) {
-      case UnitSystem.imperial:
-        return 'imperial';
-      case UnitSystem.metric:
-        return 'metric';
-    }
-  }
-}
-
 class AppSettings {
   static const Object _unset = Object();
 
@@ -22,7 +9,6 @@ class AppSettings {
   final bool mapKeyPrefixEnabled;
   final String mapKeyPrefix;
   final bool mapShowMarkers;
-  final bool enableMessageTracing;
   final Map<String, double>? mapCacheBounds;
   final int mapCacheMinZoom;
   final int mapCacheMaxZoom;
@@ -35,9 +21,17 @@ class AppSettings {
   final String? languageOverride; // null = system default
   final bool appDebugLogEnabled;
   final Map<String, String> batteryChemistryByDeviceId;
-  final Map<String, String> batteryChemistryByRepeaterId;
-  final UnitSystem unitSystem;
-  final Set<String> mutedChannels;
+  final bool roomSyncEnabled;
+  final bool roomSyncAutoLoginEnabled;
+  final int roomSyncIntervalSeconds;
+  final int roomSyncMaxIntervalSeconds;
+  final int roomSyncTimeoutSeconds;
+  final int roomSyncStaleMinutes;
+  final String defaultRadioProfile;
+  final bool contactsCompactView;
+  final bool defaultMessageScopeEnabled;
+  final String defaultMessageScopeTag;
+  final bool autoReconnectEnabled;
 
   AppSettings({
     this.clearPathOnMaxRetry = false,
@@ -48,7 +42,6 @@ class AppSettings {
     this.mapKeyPrefixEnabled = false,
     this.mapKeyPrefix = '',
     this.mapShowMarkers = true,
-    this.enableMessageTracing = false,
     this.mapCacheBounds,
     this.mapCacheMinZoom = 10,
     this.mapCacheMaxZoom = 15,
@@ -61,12 +54,18 @@ class AppSettings {
     this.languageOverride,
     this.appDebugLogEnabled = false,
     Map<String, String>? batteryChemistryByDeviceId,
-    Map<String, String>? batteryChemistryByRepeaterId,
-    this.unitSystem = UnitSystem.metric,
-    Set<String>? mutedChannels,
-  }) : batteryChemistryByDeviceId = batteryChemistryByDeviceId ?? {},
-       batteryChemistryByRepeaterId = batteryChemistryByRepeaterId ?? {},
-       mutedChannels = mutedChannels ?? {};
+    this.roomSyncEnabled = true,
+    this.roomSyncAutoLoginEnabled = true,
+    this.roomSyncIntervalSeconds = 300,
+    this.roomSyncMaxIntervalSeconds = 3600,
+    this.roomSyncTimeoutSeconds = 20,
+    this.roomSyncStaleMinutes = 45,
+    this.defaultRadioProfile = 'region_auto',
+    this.contactsCompactView = false,
+    this.defaultMessageScopeEnabled = false,
+    this.defaultMessageScopeTag = '',
+    this.autoReconnectEnabled = true,
+  }) : batteryChemistryByDeviceId = batteryChemistryByDeviceId ?? {};
 
   Map<String, dynamic> toJson() {
     return {
@@ -78,7 +77,6 @@ class AppSettings {
       'map_key_prefix_enabled': mapKeyPrefixEnabled,
       'map_key_prefix': mapKeyPrefix,
       'map_show_markers': mapShowMarkers,
-      'enable_message_tracing': enableMessageTracing,
       'map_cache_bounds': mapCacheBounds,
       'map_cache_min_zoom': mapCacheMinZoom,
       'map_cache_max_zoom': mapCacheMaxZoom,
@@ -91,20 +89,21 @@ class AppSettings {
       'language_override': languageOverride,
       'app_debug_log_enabled': appDebugLogEnabled,
       'battery_chemistry_by_device_id': batteryChemistryByDeviceId,
-      'battery_chemistry_by_repeater_id': batteryChemistryByRepeaterId,
-      'unit_system': unitSystem.value,
-      'muted_channels': mutedChannels.toList(),
+      'room_sync_enabled': roomSyncEnabled,
+      'room_sync_auto_login_enabled': roomSyncAutoLoginEnabled,
+      'room_sync_interval_seconds': roomSyncIntervalSeconds,
+      'room_sync_max_interval_seconds': roomSyncMaxIntervalSeconds,
+      'room_sync_timeout_seconds': roomSyncTimeoutSeconds,
+      'room_sync_stale_minutes': roomSyncStaleMinutes,
+      'default_radio_profile': defaultRadioProfile,
+      'contacts_compact_view': contactsCompactView,
+      'default_message_scope_enabled': defaultMessageScopeEnabled,
+      'default_message_scope_tag': defaultMessageScopeTag,
+      'auto_reconnect_enabled': autoReconnectEnabled,
     };
   }
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
-    UnitSystem parseUnitSystem(dynamic value) {
-      if (value is String && value.toLowerCase() == 'imperial') {
-        return UnitSystem.imperial;
-      }
-      return UnitSystem.metric;
-    }
-
     return AppSettings(
       clearPathOnMaxRetry: json['clear_path_on_max_retry'] as bool? ?? false,
       mapShowRepeaters: json['map_show_repeaters'] as bool? ?? true,
@@ -115,7 +114,6 @@ class AppSettings {
       mapKeyPrefixEnabled: json['map_key_prefix_enabled'] as bool? ?? false,
       mapKeyPrefix: json['map_key_prefix'] as String? ?? '',
       mapShowMarkers: json['map_show_markers'] as bool? ?? true,
-      enableMessageTracing: json['enable_message_tracing'] as bool? ?? false,
       mapCacheBounds: (json['map_cache_bounds'] as Map?)?.map(
         (key, value) => MapEntry(key.toString(), (value as num).toDouble()),
       ),
@@ -136,17 +134,23 @@ class AppSettings {
             (key, value) => MapEntry(key.toString(), value.toString()),
           ) ??
           {},
-      batteryChemistryByRepeaterId:
-          (json['battery_chemistry_by_repeater_id'] as Map?)?.map(
-            (key, value) => MapEntry(key.toString(), value.toString()),
-          ) ??
-          {},
-      unitSystem: parseUnitSystem(json['unit_system']),
-      mutedChannels:
-          ((json['muted_channels'] as List?)
-              ?.map((e) => e.toString())
-              .toSet()) ??
-          {},
+      roomSyncEnabled: json['room_sync_enabled'] as bool? ?? true,
+      roomSyncAutoLoginEnabled:
+          json['room_sync_auto_login_enabled'] as bool? ?? true,
+      roomSyncIntervalSeconds:
+          json['room_sync_interval_seconds'] as int? ?? 300,
+      roomSyncMaxIntervalSeconds:
+          json['room_sync_max_interval_seconds'] as int? ?? 3600,
+      roomSyncTimeoutSeconds: json['room_sync_timeout_seconds'] as int? ?? 20,
+      roomSyncStaleMinutes: json['room_sync_stale_minutes'] as int? ?? 45,
+      defaultRadioProfile:
+          json['default_radio_profile'] as String? ?? 'region_auto',
+      contactsCompactView: json['contacts_compact_view'] as bool? ?? false,
+      defaultMessageScopeEnabled:
+          json['default_message_scope_enabled'] as bool? ?? false,
+      defaultMessageScopeTag:
+          json['default_message_scope_tag'] as String? ?? '',
+      autoReconnectEnabled: json['auto_reconnect_enabled'] as bool? ?? true,
     );
   }
 
@@ -159,7 +163,6 @@ class AppSettings {
     bool? mapKeyPrefixEnabled,
     String? mapKeyPrefix,
     bool? mapShowMarkers,
-    bool? enableMessageTracing,
     Object? mapCacheBounds = _unset,
     int? mapCacheMinZoom,
     int? mapCacheMaxZoom,
@@ -172,9 +175,17 @@ class AppSettings {
     Object? languageOverride = _unset,
     bool? appDebugLogEnabled,
     Map<String, String>? batteryChemistryByDeviceId,
-    Map<String, String>? batteryChemistryByRepeaterId,
-    UnitSystem? unitSystem,
-    Set<String>? mutedChannels,
+    bool? roomSyncEnabled,
+    bool? roomSyncAutoLoginEnabled,
+    int? roomSyncIntervalSeconds,
+    int? roomSyncMaxIntervalSeconds,
+    int? roomSyncTimeoutSeconds,
+    int? roomSyncStaleMinutes,
+    String? defaultRadioProfile,
+    bool? contactsCompactView,
+    bool? defaultMessageScopeEnabled,
+    String? defaultMessageScopeTag,
+    bool? autoReconnectEnabled,
   }) {
     return AppSettings(
       clearPathOnMaxRetry: clearPathOnMaxRetry ?? this.clearPathOnMaxRetry,
@@ -185,7 +196,6 @@ class AppSettings {
       mapKeyPrefixEnabled: mapKeyPrefixEnabled ?? this.mapKeyPrefixEnabled,
       mapKeyPrefix: mapKeyPrefix ?? this.mapKeyPrefix,
       mapShowMarkers: mapShowMarkers ?? this.mapShowMarkers,
-      enableMessageTracing: enableMessageTracing ?? this.enableMessageTracing,
       mapCacheBounds: mapCacheBounds == _unset
           ? this.mapCacheBounds
           : mapCacheBounds as Map<String, double>?,
@@ -205,10 +215,23 @@ class AppSettings {
       appDebugLogEnabled: appDebugLogEnabled ?? this.appDebugLogEnabled,
       batteryChemistryByDeviceId:
           batteryChemistryByDeviceId ?? this.batteryChemistryByDeviceId,
-      batteryChemistryByRepeaterId:
-          batteryChemistryByRepeaterId ?? this.batteryChemistryByRepeaterId,
-      unitSystem: unitSystem ?? this.unitSystem,
-      mutedChannels: mutedChannels ?? this.mutedChannels,
+      roomSyncEnabled: roomSyncEnabled ?? this.roomSyncEnabled,
+      roomSyncAutoLoginEnabled:
+          roomSyncAutoLoginEnabled ?? this.roomSyncAutoLoginEnabled,
+      roomSyncIntervalSeconds:
+          roomSyncIntervalSeconds ?? this.roomSyncIntervalSeconds,
+      roomSyncMaxIntervalSeconds:
+          roomSyncMaxIntervalSeconds ?? this.roomSyncMaxIntervalSeconds,
+      roomSyncTimeoutSeconds:
+          roomSyncTimeoutSeconds ?? this.roomSyncTimeoutSeconds,
+      roomSyncStaleMinutes: roomSyncStaleMinutes ?? this.roomSyncStaleMinutes,
+      defaultRadioProfile: defaultRadioProfile ?? this.defaultRadioProfile,
+      contactsCompactView: contactsCompactView ?? this.contactsCompactView,
+      defaultMessageScopeEnabled:
+          defaultMessageScopeEnabled ?? this.defaultMessageScopeEnabled,
+      defaultMessageScopeTag:
+          defaultMessageScopeTag ?? this.defaultMessageScopeTag,
+      autoReconnectEnabled: autoReconnectEnabled ?? this.autoReconnectEnabled,
     );
   }
 }

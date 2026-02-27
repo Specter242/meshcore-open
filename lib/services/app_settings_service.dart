@@ -17,12 +17,6 @@ class AppSettingsService extends ChangeNotifier {
     return stored ?? 'nmc';
   }
 
-  String batteryChemistryForRepeater(String repeaterPubKeyHex) {
-    final stored = _settings.batteryChemistryByRepeaterId[repeaterPubKeyHex];
-    if (stored == 'liion') return 'nmc';
-    return stored ?? 'nmc';
-  }
-
   Future<void> loadSettings() async {
     final prefs = PrefsManager.instance;
     final jsonStr = prefs.getString(_settingsKey);
@@ -78,10 +72,6 @@ class AppSettingsService extends ChangeNotifier {
 
   Future<void> setMapShowMarkers(bool value) async {
     await updateSettings(_settings.copyWith(mapShowMarkers: value));
-  }
-
-  Future<void> setEnableMessageTracing(bool value) async {
-    await updateSettings(_settings.copyWith(enableMessageTracing: value));
   }
 
   Future<void> setMapCacheBounds(Map<String, double>? value) async {
@@ -143,35 +133,49 @@ class AppSettingsService extends ChangeNotifier {
     );
   }
 
-  Future<void> setBatteryChemistryForRepeater(
-    String repeaterPubKeyHex,
-    String chemistry,
-  ) async {
-    final updated = Map<String, String>.from(
-      _settings.batteryChemistryByRepeaterId,
-    );
-    updated[repeaterPubKeyHex] = chemistry;
+  Future<void> setRoomSyncEnabled(bool value) async {
+    await updateSettings(_settings.copyWith(roomSyncEnabled: value));
+  }
+
+  Future<void> setRoomSyncAutoLoginEnabled(bool value) async {
+    await updateSettings(_settings.copyWith(roomSyncAutoLoginEnabled: value));
+  }
+
+  Future<void> setRoomSyncIntervalSeconds(int seconds) async {
+    await updateSettings(_settings.copyWith(roomSyncIntervalSeconds: seconds));
+  }
+
+  Future<void> setRoomSyncMaxIntervalSeconds(int seconds) async {
     await updateSettings(
-      _settings.copyWith(batteryChemistryByRepeaterId: updated),
+      _settings.copyWith(roomSyncMaxIntervalSeconds: seconds),
     );
   }
 
-  Future<void> setUnitSystem(UnitSystem value) async {
-    await updateSettings(_settings.copyWith(unitSystem: value));
+  Future<void> setRoomSyncTimeoutSeconds(int seconds) async {
+    await updateSettings(_settings.copyWith(roomSyncTimeoutSeconds: seconds));
   }
 
-  bool isChannelMuted(String channelName) {
-    return _settings.mutedChannels.contains(channelName);
+  Future<void> setRoomSyncStaleMinutes(int minutes) async {
+    await updateSettings(_settings.copyWith(roomSyncStaleMinutes: minutes));
   }
 
-  Future<void> muteChannel(String channelName) async {
-    final updated = Set<String>.from(_settings.mutedChannels)..add(channelName);
-    await updateSettings(_settings.copyWith(mutedChannels: updated));
+  Future<void> setDefaultRadioProfile(String value) async {
+    await updateSettings(_settings.copyWith(defaultRadioProfile: value));
   }
 
-  Future<void> unmuteChannel(String channelName) async {
-    final updated = Set<String>.from(_settings.mutedChannels)
-      ..remove(channelName);
-    await updateSettings(_settings.copyWith(mutedChannels: updated));
+  Future<void> setContactsCompactView(bool value) async {
+    await updateSettings(_settings.copyWith(contactsCompactView: value));
+  }
+
+  Future<void> setAutoReconnectEnabled(bool value) async {
+    await updateSettings(_settings.copyWith(autoReconnectEnabled: value));
+  }
+
+  Future<void> setDefaultMessageScopeEnabled(bool value) async {
+    await updateSettings(_settings.copyWith(defaultMessageScopeEnabled: value));
+  }
+
+  Future<void> setDefaultMessageScopeTag(String value) async {
+    await updateSettings(_settings.copyWith(defaultMessageScopeTag: value));
   }
 }

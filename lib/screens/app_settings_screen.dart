@@ -3,10 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../connector/meshcore_connector.dart';
 import '../l10n/l10n.dart';
-import '../models/app_settings.dart';
+import '../models/community_radio_presets.dart';
 import '../services/app_settings_service.dart';
 import '../services/notification_service.dart';
-import '../widgets/adaptive_app_bar_title.dart';
 import 'map_cache_screen.dart';
 
 class AppSettingsScreen extends StatelessWidget {
@@ -16,7 +15,7 @@ class AppSettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: AdaptiveAppBarTitle(context.l10n.appSettings_title),
+        title: Text(context.l10n.appSettings_title),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -30,7 +29,13 @@ class AppSettingsScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 _buildNotificationsCard(context, settingsService),
                 const SizedBox(height: 16),
+                _buildConnectionCard(context, settingsService, connector),
+                const SizedBox(height: 16),
                 _buildMessagingCard(context, settingsService),
+                const SizedBox(height: 16),
+                _buildRadioDefaultsCard(context, settingsService),
+                const SizedBox(height: 16),
+                _buildRoomSyncCard(context, settingsService),
                 const SizedBox(height: 16),
                 _buildBatteryCard(context, settingsService, connector),
                 const SizedBox(height: 16),
@@ -81,18 +86,6 @@ class AppSettingsScreen extends StatelessWidget {
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showLanguageDialog(context, settingsService),
-          ),
-          const Divider(height: 1),
-          SwitchListTile(
-            secondary: const Icon(Icons.location_searching),
-            title: Text(context.l10n.appSettings_enableMessageTracing),
-            subtitle: Text(
-              context.l10n.appSettings_enableMessageTracingSubtitle,
-            ),
-            value: settingsService.settings.enableMessageTracing,
-            onChanged: (value) {
-              settingsService.setEnableMessageTracing(value);
-            },
           ),
         ],
       ),
@@ -254,6 +247,53 @@ class AppSettingsScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildConnectionCard(
+    BuildContext context,
+    AppSettingsService settingsService,
+    MeshCoreConnector connector,
+  ) {
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              context.l10n.appSettings_connection,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.bluetooth_connected),
+            title: Text(context.l10n.appSettings_autoReconnect),
+            subtitle: Text(context.l10n.appSettings_autoReconnectSubtitle),
+            value: settingsService.settings.autoReconnectEnabled,
+            onChanged: (value) {
+              settingsService.setAutoReconnectEnabled(value);
+              if (!value && connector.isReconnecting) {
+                connector.cancelReconnection();
+              }
+              if (value &&
+                  connector.state == MeshCoreConnectionState.disconnected) {
+                connector.triggerReconnect();
+              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    value
+                        ? context.l10n.appSettings_autoReconnectEnabled
+                        : context.l10n.appSettings_autoReconnectDisabled,
+                  ),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMessagingCard(
     BuildContext context,
     AppSettingsService settingsService,
@@ -308,6 +348,48 @@ class AppSettingsScreen extends StatelessWidget {
                   duration: const Duration(seconds: 2),
                 ),
               );
+            },
+          ),
+          const Divider(height: 1),
+          SwitchListTile(
+            secondary: const Icon(Icons.alternate_email_outlined),
+            title: const Text('Default message scope'),
+            subtitle: const Text(
+              'Apply a scope token when a message has no @scope tag.',
+            ),
+            value: settingsService.settings.defaultMessageScopeEnabled,
+            onChanged: (value) {
+              settingsService.setDefaultMessageScopeEnabled(value);
+            },
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.tag_outlined),
+            title: const Text('Default scope tag'),
+            subtitle: Text(
+              settingsService.settings.defaultMessageScopeTag.trim().isEmpty
+                  ? '@global'
+                  : settingsService.settings.defaultMessageScopeTag.trim(),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _editTextSetting(
+              context: context,
+              title: 'Default scope tag',
+              initialValue: settingsService.settings.defaultMessageScopeTag,
+              helperText: 'Examples: @global, @local, @group:region',
+              onSave: settingsService.setDefaultMessageScopeTag,
+            ),
+          ),
+          const Divider(height: 1),
+          SwitchListTile(
+            secondary: const Icon(Icons.view_agenda_outlined),
+            title: const Text('Compact contacts view'),
+            subtitle: const Text(
+              'Hide routing type and hardware address in contacts list.',
+            ),
+            value: settingsService.settings.contactsCompactView,
+            onChanged: (value) {
+              settingsService.setContactsCompactView(value);
             },
           ),
         ],
@@ -375,18 +457,6 @@ class AppSettingsScreen extends StatelessWidget {
           ),
           const Divider(height: 1),
           ListTile(
-            leading: const Icon(Icons.straighten),
-            title: Text(context.l10n.appSettings_unitsTitle),
-            subtitle: Text(
-              settingsService.settings.unitSystem == UnitSystem.imperial
-                  ? context.l10n.appSettings_unitsImperial
-                  : context.l10n.appSettings_unitsMetric,
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showUnitsDialog(context, settingsService),
-          ),
-          const Divider(height: 1),
-          ListTile(
             leading: const Icon(Icons.download_outlined),
             title: Text(context.l10n.appSettings_offlineMapCache),
             subtitle: Text(
@@ -404,6 +474,175 @@ class AppSettingsScreen extends StatelessWidget {
                 MaterialPageRoute(builder: (context) => const MapCacheScreen()),
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRadioDefaultsCard(
+    BuildContext context,
+    AppSettingsService settingsService,
+  ) {
+    final selectedProfile = settingsService.settings.defaultRadioProfile;
+    final safeProfile = CommunityRadioPreset.isKnownProfile(selectedProfile)
+        ? selectedProfile
+        : CommunityRadioPreset.regionAutoProfile;
+
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Radio Defaults',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.radio_outlined),
+            title: const Text('Default radio preset'),
+            subtitle: Text(_radioProfileLabel(safeProfile)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: DropdownButtonFormField<String>(
+              initialValue: safeProfile,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                border: UnderlineInputBorder(),
+                helperText:
+                    'Used when the node has no radio values yet (region auto uses device locale).',
+              ),
+              items: [
+                const DropdownMenuItem(
+                  value: CommunityRadioPreset.regionAutoProfile,
+                  child: Text('Auto by region'),
+                ),
+                ...CommunityRadioPreset.all.map(
+                  (preset) => DropdownMenuItem(
+                    value: preset.profileValue,
+                    child: Text(preset.name),
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  settingsService.setDefaultRadioProfile(value);
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoomSyncCard(
+    BuildContext context,
+    AppSettingsService settingsService,
+  ) {
+    final settings = settingsService.settings;
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              context.l10n.appSettings_roomSyncTitle,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.sync),
+            title: Text(context.l10n.appSettings_roomSyncEnableTitle),
+            subtitle: Text(context.l10n.appSettings_roomSyncEnableSubtitle),
+            value: settings.roomSyncEnabled,
+            onChanged: (value) => settingsService.setRoomSyncEnabled(value),
+          ),
+          const Divider(height: 1),
+          SwitchListTile(
+            secondary: const Icon(Icons.login),
+            title: Text(context.l10n.appSettings_roomSyncAutoLoginTitle),
+            subtitle: Text(context.l10n.appSettings_roomSyncAutoLoginSubtitle),
+            value: settings.roomSyncAutoLoginEnabled,
+            onChanged: settings.roomSyncEnabled
+                ? (value) => settingsService.setRoomSyncAutoLoginEnabled(value)
+                : null,
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.timer_outlined),
+            title: Text(context.l10n.appSettings_roomSyncBaseIntervalTitle),
+            subtitle: Text('${settings.roomSyncIntervalSeconds}s'),
+            trailing: const Icon(Icons.chevron_right),
+            enabled: settings.roomSyncEnabled,
+            onTap: settings.roomSyncEnabled
+                ? () => _editIntegerSetting(
+                    context: context,
+                    title: context.l10n.appSettings_roomSyncBaseIntervalDialog,
+                    initialValue: settings.roomSyncIntervalSeconds,
+                    min: 15,
+                    max: 3600,
+                    onSave: settingsService.setRoomSyncIntervalSeconds,
+                  )
+                : null,
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.schedule),
+            title: Text(context.l10n.appSettings_roomSyncMaxBackoffTitle),
+            subtitle: Text('${settings.roomSyncMaxIntervalSeconds}s'),
+            trailing: const Icon(Icons.chevron_right),
+            enabled: settings.roomSyncEnabled,
+            onTap: settings.roomSyncEnabled
+                ? () => _editIntegerSetting(
+                    context: context,
+                    title: context.l10n.appSettings_roomSyncMaxBackoffDialog,
+                    initialValue: settings.roomSyncMaxIntervalSeconds,
+                    min: 30,
+                    max: 7200,
+                    onSave: settingsService.setRoomSyncMaxIntervalSeconds,
+                  )
+                : null,
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.hourglass_bottom),
+            title: Text(context.l10n.appSettings_roomSyncTimeoutTitle),
+            subtitle: Text('${settings.roomSyncTimeoutSeconds}s'),
+            trailing: const Icon(Icons.chevron_right),
+            enabled: settings.roomSyncEnabled,
+            onTap: settings.roomSyncEnabled
+                ? () => _editIntegerSetting(
+                    context: context,
+                    title: context.l10n.appSettings_roomSyncTimeoutDialog,
+                    initialValue: settings.roomSyncTimeoutSeconds,
+                    min: 5,
+                    max: 120,
+                    onSave: settingsService.setRoomSyncTimeoutSeconds,
+                  )
+                : null,
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.warning_amber_outlined),
+            title: Text(context.l10n.appSettings_roomSyncStaleAfterTitle),
+            subtitle: Text('${settings.roomSyncStaleMinutes} min'),
+            trailing: const Icon(Icons.chevron_right),
+            enabled: settings.roomSyncEnabled,
+            onTap: settings.roomSyncEnabled
+                ? () => _editIntegerSetting(
+                    context: context,
+                    title: context.l10n.appSettings_roomSyncStaleAfterDialog,
+                    initialValue: settings.roomSyncStaleMinutes,
+                    min: 1,
+                    max: 240,
+                    onSave: settingsService.setRoomSyncStaleMinutes,
+                  )
+                : null,
           ),
         ],
       ),
@@ -582,6 +821,15 @@ class AppSettingsScreen extends StatelessWidget {
     }
   }
 
+  String _radioProfileLabel(String profile) {
+    if (profile == CommunityRadioPreset.regionAutoProfile) {
+      return 'Auto by region';
+    }
+    final preset = CommunityRadioPreset.fromProfile(profile);
+    if (preset != null) return preset.name;
+    return 'Auto by region';
+  }
+
   void _showLanguageDialog(
     BuildContext context,
     AppSettingsService settingsService,
@@ -732,40 +980,85 @@ class AppSettingsScreen extends StatelessWidget {
     );
   }
 
-  void _showUnitsDialog(
-    BuildContext context,
-    AppSettingsService settingsService,
-  ) {
+  void _editTextSetting({
+    required BuildContext context,
+    required String title,
+    required String initialValue,
+    String? helperText,
+    required Future<void> Function(String) onSave,
+  }) {
+    final controller = TextEditingController(text: initialValue);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(context.l10n.appSettings_unitsTitle),
-        content: RadioGroup<UnitSystem>(
-          groupValue: settingsService.settings.unitSystem,
-          onChanged: (value) {
-            if (value != null) {
-              settingsService.setUnitSystem(value);
-              Navigator.pop(context);
-            }
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: Text(context.l10n.appSettings_unitsMetric),
-                leading: const Radio<UnitSystem>(value: UnitSystem.metric),
-              ),
-              ListTile(
-                title: Text(context.l10n.appSettings_unitsImperial),
-                leading: const Radio<UnitSystem>(value: UnitSystem.imperial),
-              ),
-            ],
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
+            helperText: helperText,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(context.l10n.common_close),
+            child: Text(context.l10n.common_cancel),
+          ),
+          TextButton(
+            onPressed: () async {
+              await onSave(controller.text.trim());
+              if (!context.mounted) return;
+              Navigator.pop(context);
+            },
+            child: Text(context.l10n.common_save),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editIntegerSetting({
+    required BuildContext context,
+    required String title,
+    required int initialValue,
+    required int min,
+    required int max,
+    required Future<void> Function(int) onSave,
+  }) {
+    final controller = TextEditingController(text: initialValue.toString());
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
+            helperText: 'Allowed range: $min - $max',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(context.l10n.common_cancel),
+          ),
+          TextButton(
+            onPressed: () async {
+              final parsed = int.tryParse(controller.text.trim());
+              if (parsed == null || parsed < min || parsed > max) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Value must be between $min and $max'),
+                  ),
+                );
+                return;
+              }
+              await onSave(parsed);
+              if (!context.mounted) return;
+              Navigator.pop(context);
+            },
+            child: Text(context.l10n.common_save),
           ),
         ],
       ),

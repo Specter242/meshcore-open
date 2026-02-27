@@ -58,17 +58,11 @@ class NotificationService {
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-    const windowsSettings = WindowsInitializationSettings(
-      appName: 'MeshCore Open',
-      appUserModelId: 'org.meshcore.open.app',
-      guid: 'e7ea8f85-72f5-4f36-91f6-038f740ccf86',
-    );
 
     const initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
       macOS: macSettings,
-      windows: windowsSettings,
     );
 
     try {
@@ -80,13 +74,6 @@ class NotificationService {
     } catch (e) {
       debugPrint('Error initializing notifications: $e');
     }
-  }
-
-  Future<bool> _ensureInitialized() async {
-    if (!_isInitialized) {
-      await initialize();
-    }
-    return _isInitialized;
   }
 
   Future<bool> requestPermissions() async {
@@ -127,7 +114,9 @@ class NotificationService {
     String? contactId,
     int? badgeCount,
   }) async {
-    if (!await _ensureInitialized()) return;
+    if (!_isInitialized) {
+      await initialize();
+    }
 
     final androidDetails = AndroidNotificationDetails(
       'messages',
@@ -159,17 +148,13 @@ class NotificationService {
       macOS: macDetails,
     );
 
-    try {
-      await _notifications.show(
-        id: contactId?.hashCode ?? 0,
-        title: contactName,
-        body: message,
-        notificationDetails: notificationDetails,
-        payload: 'message:$contactId',
-      );
-    } catch (e) {
-      debugPrint('Failed to show message notification: $e');
-    }
+    await _notifications.show(
+      id: contactId?.hashCode ?? 0,
+      title: contactName,
+      body: message,
+      notificationDetails: notificationDetails,
+      payload: 'message:$contactId',
+    );
   }
 
   Future<void> _showAdvertNotificationImpl({
@@ -177,7 +162,9 @@ class NotificationService {
     required String contactType,
     String? contactId,
   }) async {
-    if (!await _ensureInitialized()) return;
+    if (!_isInitialized) {
+      await initialize();
+    }
 
     const androidDetails = AndroidNotificationDetails(
       'adverts',
@@ -206,17 +193,13 @@ class NotificationService {
       macOS: macDetails,
     );
 
-    try {
-      await _notifications.show(
-        id: contactId?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
-        title: _l10n.notification_newTypeDiscovered(contactType),
-        body: contactName,
-        notificationDetails: notificationDetails,
-        payload: 'advert:$contactId',
-      );
-    } catch (e) {
-      debugPrint('Failed to show advert notification: $e');
-    }
+    await _notifications.show(
+      id: contactId?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
+      title: _l10n.notification_newTypeDiscovered(contactType),
+      body: contactName,
+      notificationDetails: notificationDetails,
+      payload: 'advert:$contactId',
+    );
   }
 
   Future<void> _showChannelMessageNotificationImpl({
@@ -225,7 +208,9 @@ class NotificationService {
     int? channelIndex,
     int? badgeCount,
   }) async {
-    if (!await _ensureInitialized()) return;
+    if (!_isInitialized) {
+      await initialize();
+    }
 
     final androidDetails = AndroidNotificationDetails(
       'channel_messages',
@@ -262,17 +247,13 @@ class NotificationService {
         ? _l10n.notification_receivedNewMessage
         : preview;
 
-    try {
-      await _notifications.show(
-        id: channelIndex?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
-        title: channelName,
-        body: body,
-        notificationDetails: notificationDetails,
-        payload: 'channel:$channelIndex',
-      );
-    } catch (e) {
-      debugPrint('Failed to show channel notification: $e');
-    }
+    await _notifications.show(
+      id: channelIndex?.hashCode ?? DateTime.now().millisecondsSinceEpoch,
+      title: channelName,
+      body: body,
+      notificationDetails: notificationDetails,
+      payload: 'channel:$channelIndex',
+    );
   }
 
   /// Returns a privacy-safe identifier for debug logging.
@@ -415,39 +396,35 @@ class NotificationService {
   Future<void> _showNotificationImmediately(
     _PendingNotification notification,
   ) async {
-    try {
-      switch (notification.type) {
-        case _NotificationType.message:
-          await _showMessageNotificationImpl(
-            contactName: notification.title,
-            message: notification.body,
-            contactId: notification.id,
-            badgeCount: notification.badgeCount,
-          );
-          break;
-        case _NotificationType.advert:
-          await _showAdvertNotificationImpl(
-            contactName: notification.body,
-            contactType: notification.title,
-            contactId: notification.id,
-          );
-          break;
-        case _NotificationType.channelMessage:
-          await _showChannelMessageNotificationImpl(
-            channelName: notification.title,
-            message: notification.body,
-            channelIndex: int.tryParse(notification.id ?? ''),
-            badgeCount: notification.badgeCount,
-          );
-          break;
-      }
-    } catch (e) {
-      debugPrint('Failed to show immediate notification: $e');
+    switch (notification.type) {
+      case _NotificationType.message:
+        await _showMessageNotificationImpl(
+          contactName: notification.title,
+          message: notification.body,
+          contactId: notification.id,
+          badgeCount: notification.badgeCount,
+        );
+        break;
+      case _NotificationType.advert:
+        await _showAdvertNotificationImpl(
+          contactName: notification.body,
+          contactType: notification.title,
+          contactId: notification.id,
+        );
+        break;
+      case _NotificationType.channelMessage:
+        await _showChannelMessageNotificationImpl(
+          channelName: notification.title,
+          message: notification.body,
+          channelIndex: int.tryParse(notification.id ?? ''),
+          badgeCount: notification.badgeCount,
+        );
+        break;
     }
   }
 
   Future<void> _showBatchSummary(List<_PendingNotification> batch) async {
-    if (!await _ensureInitialized()) return;
+    if (!_isInitialized) await initialize();
 
     // Group by type
     final messages = batch
@@ -491,17 +468,13 @@ class NotificationService {
 
     const notificationDetails = NotificationDetails(android: androidDetails);
 
-    try {
-      await _notifications.show(
-        id: 'batch_summary'.hashCode,
-        title: _l10n.notification_activityTitle,
-        body: parts.join(', '),
-        notificationDetails: notificationDetails,
-        payload: 'batch',
-      );
-    } catch (e) {
-      debugPrint('Failed to show batch summary notification: $e');
-    }
+    await _notifications.show(
+      id: 'batch_summary'.hashCode,
+      title: _l10n.notification_activityTitle,
+      body: parts.join(', '),
+      notificationDetails: notificationDetails,
+      payload: 'batch',
+    );
   }
 }
 

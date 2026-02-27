@@ -7,8 +7,9 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../connector/meshcore_connector.dart';
 import '../connector/meshcore_protocol.dart';
 import '../l10n/l10n.dart';
+import '../models/community_radio_presets.dart';
 import '../models/radio_settings.dart';
-import '../widgets/adaptive_app_bar_title.dart';
+import '../services/app_settings_service.dart';
 import 'app_settings_screen.dart';
 import 'app_debug_log_screen.dart';
 import 'ble_debug_log_screen.dart';
@@ -42,10 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(
-        title: AdaptiveAppBarTitle(l10n.settings_title),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: Text(l10n.settings_title), centerTitle: true),
       body: SafeArea(
         top: false,
         child: Consumer<MeshCoreConnector>(
@@ -746,7 +744,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _gpxExport(
+  _gpxExport(
     GpxExport exporter,
     String name,
     String description,
@@ -786,7 +784,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Widget _buildExportCard(MeshCoreConnector connector) {
+  _buildExportCard(MeshCoreConnector connector) {
     final l10n = context.l10n;
     return Card(
       child: Column(
@@ -866,7 +864,6 @@ class _RadioSettingsDialogState extends State<_RadioSettingsDialog> {
   LoRaSpreadingFactor _spreadingFactor = LoRaSpreadingFactor.sf7;
   LoRaCodingRate _codingRate = LoRaCodingRate.cr4_5;
   final _txPowerController = TextEditingController(text: '20');
-  bool _clientRepeat = false;
 
   @override
   void initState() {
@@ -877,7 +874,17 @@ class _RadioSettingsDialogState extends State<_RadioSettingsDialog> {
       _frequencyController.text = (widget.connector.currentFreqHz! / 1000.0)
           .toStringAsFixed(3);
     } else {
-      _frequencyController.text = '915.0';
+      final settingsService = context.read<AppSettingsService>();
+      final locale =
+          Localizations.maybeLocaleOf(context) ??
+          WidgetsBinding.instance.platformDispatcher.locale;
+      final profile = settingsService.settings.defaultRadioProfile;
+      final preset = CommunityRadioPreset.resolveProfileSettings(
+        profile,
+        countryCode: locale.countryCode,
+        languageCode: locale.languageCode,
+      );
+      _applyPreset(preset);
     }
 
     if (widget.connector.currentBwHz != null) {
@@ -916,8 +923,6 @@ class _RadioSettingsDialogState extends State<_RadioSettingsDialog> {
     if (widget.connector.currentTxPower != null) {
       _txPowerController.text = widget.connector.currentTxPower.toString();
     }
-
-    _clientRepeat = widget.connector.clientRepeat ?? false;
   }
 
   @override
@@ -935,6 +940,27 @@ class _RadioSettingsDialogState extends State<_RadioSettingsDialog> {
       _codingRate = preset.codingRate;
       _txPowerController.text = preset.txPowerDbm.toString();
     });
+  }
+
+  String _describePreset(CommunityRadioPreset preset) {
+    final bwKHz = preset.settings.bandwidth.hz / 1000;
+    final bwLabel = bwKHz.toStringAsFixed(
+      bwKHz.truncateToDouble() == bwKHz ? 0 : 1,
+    );
+    return '${preset.settings.frequencyMHz.toStringAsFixed(3)}MHz / SF${preset.settings.spreadingFactor.value} / BW$bwLabel / CR${preset.settings.codingRate.value}';
+  }
+
+  Future<void> _showCommunityPresetDialog() async {
+    final selected = await showDialog<CommunityRadioPreset>(
+      context: context,
+      builder: (context) => _NodeCommunityPresetDialog(
+        presets: CommunityRadioPreset.all,
+        describePreset: _describePreset,
+      ),
+    );
+    if (selected != null) {
+      _applyPreset(selected.settings);
+    }
   }
 
   Future<void> _saveSettings() async {
@@ -967,29 +993,9 @@ class _RadioSettingsDialogState extends State<_RadioSettingsDialog> {
       widget.connector.currentCr,
     );
 
-    // if the client repeat isnt null then we know its supported
-    //otherwise we leave it out of the frame to avoid accidentally enabling
-    final knownRepeat = widget.connector.clientRepeat != null;
-
-    if (knownRepeat) {
-      const validRepeatFreqsKHz = {433000, 869000, 918000};
-      if (_clientRepeat && !validRepeatFreqsKHz.contains(freqHz)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.settings_clientRepeatFreqWarning)),
-        );
-        return;
-      }
-    }
-
     try {
       await widget.connector.sendFrame(
-        buildSetRadioParamsFrame(
-          freqHz,
-          bwHz,
-          sf,
-          cr,
-          clientRepeat: knownRepeat ? _clientRepeat : null,
-        ),
+        buildSetRadioParamsFrame(freqHz, bwHz, sf, cr),
       );
       await widget.connector.sendFrame(buildSetRadioTxPowerFrame(txPower));
       await widget.connector.refreshDeviceInfo();
@@ -1028,25 +1034,20 @@ class _RadioSettingsDialogState extends State<_RadioSettingsDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            DropdownButtonFormField<int>(
-              decoration: InputDecoration(
-                labelText: l10n.settings_presets,
-                border: const OutlineInputBorder(),
-              ),
-              items: [
-                for (var i = 0; i < RadioSettings.presets.length; i++)
-                  DropdownMenuItem(
-                    value: i,
-                    child: Text(RadioSettings.presets[i].$1),
-                  ),
-              ],
-              onChanged: (index) {
-                if (index != null) {
-                  _applyPreset(RadioSettings.presets[index].$2);
-                }
-              },
+            Text(
+              l10n.settings_presets,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                OutlinedButton(
+                  onPressed: _showCommunityPresetDialog,
+                  child: const Text('Choose Preset'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
             TextField(
               controller: _frequencyController,
               decoration: InputDecoration(
@@ -1118,16 +1119,6 @@ class _RadioSettingsDialogState extends State<_RadioSettingsDialog> {
               ),
               keyboardType: TextInputType.number,
             ),
-            if (widget.connector.clientRepeat != null) ...[
-              const SizedBox(height: 16),
-              SwitchListTile(
-                title: Text(l10n.settings_clientRepeat),
-                subtitle: Text(l10n.settings_clientRepeatSubtitle),
-                value: _clientRepeat,
-                onChanged: (value) => setState(() => _clientRepeat = value),
-                contentPadding: EdgeInsets.zero,
-              ),
-            ],
           ],
         ),
       ),
@@ -1137,6 +1128,94 @@ class _RadioSettingsDialogState extends State<_RadioSettingsDialog> {
           child: Text(l10n.common_cancel),
         ),
         FilledButton(onPressed: _saveSettings, child: Text(l10n.common_save)),
+      ],
+    );
+  }
+}
+
+class _NodeCommunityPresetDialog extends StatefulWidget {
+  final List<CommunityRadioPreset> presets;
+  final String Function(CommunityRadioPreset preset) describePreset;
+
+  const _NodeCommunityPresetDialog({
+    required this.presets,
+    required this.describePreset,
+  });
+
+  @override
+  State<_NodeCommunityPresetDialog> createState() =>
+      _NodeCommunityPresetDialogState();
+}
+
+class _NodeCommunityPresetDialogState
+    extends State<_NodeCommunityPresetDialog> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final query = _searchController.text.trim().toLowerCase();
+    final filtered = widget.presets.where((preset) {
+      if (query.isEmpty) return true;
+      final haystack = '${preset.name} ${widget.describePreset(preset)}'
+          .toLowerCase();
+      return haystack.contains(query);
+    }).toList();
+
+    return AlertDialog(
+      title: const Text('Select Radio Settings'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'These presets are suggested by the community.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                hintText: 'Search',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.search),
+                isDense: true,
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  final preset = filtered[index];
+                  return ListTile(
+                    dense: true,
+                    title: Text(preset.name),
+                    subtitle: Text(widget.describePreset(preset)),
+                    onTap: () => Navigator.pop(context, preset),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(context.l10n.common_cancel),
+        ),
       ],
     );
   }

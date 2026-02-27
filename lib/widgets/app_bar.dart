@@ -3,8 +3,6 @@ import 'package:meshcore_open/connector/meshcore_connector.dart';
 import 'package:meshcore_open/widgets/battery_indicator.dart';
 import 'package:provider/provider.dart';
 
-import 'snr_indicator.dart';
-
 class AppBarTitle extends StatelessWidget {
   final String title;
   final Widget? leading;
@@ -25,8 +23,7 @@ class AppBarTitle extends StatelessWidget {
         final showSubtitle =
             !compact && connector.isConnected && selfName != null;
         final showBattery = availableWidth >= 60;
-        final showSnr = availableWidth >= 110;
-        final showIndicators = showBattery || showSnr;
+        final showIndicators = showBattery;
 
         return Row(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -55,7 +52,6 @@ class AppBarTitle extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (showBattery) BatteryIndicator(connector: connector),
-                  if (showSnr) SNRIndicator(connector: connector),
                 ],
               ),
             trailing ?? const SizedBox.shrink(),

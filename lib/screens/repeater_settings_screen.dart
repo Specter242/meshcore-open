@@ -3,9 +3,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/l10n.dart';
+import '../models/community_radio_presets.dart';
 import '../models/contact.dart';
 import '../connector/meshcore_connector.dart';
 import '../connector/meshcore_protocol.dart';
+import '../models/radio_settings.dart';
+import '../services/app_settings_service.dart';
 import '../services/app_debug_log_service.dart';
 import '../services/repeater_command_service.dart';
 import '../widgets/path_management_dialog.dart';
@@ -34,6 +37,11 @@ class _RepeaterSettingsScreenState extends State<RepeaterSettingsScreen> {
   bool _refreshingRepeat = false;
   bool _refreshingAllowReadOnly = false;
   bool _refreshingAdvertisement = false;
+  bool _refreshingAdvanced = false;
+  bool _refreshingIntThresh = false;
+  bool _refreshingAgcResetInterval = false;
+  bool _refreshingFloodMax = false;
+  bool _refreshingMultiAcks = false;
   StreamSubscription<Uint8List>? _frameSubscription;
   RepeaterCommandService? _commandService;
   final Map<String, String> _fetchedSettings = {};
@@ -43,6 +51,17 @@ class _RepeaterSettingsScreenState extends State<RepeaterSettingsScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _guestPasswordController =
       TextEditingController();
+
+  // Advanced settings
+  final TextEditingController _intThreshController = TextEditingController(
+    text: '14',
+  );
+  final TextEditingController _agcResetIntervalController =
+      TextEditingController();
+  final TextEditingController _floodMaxController = TextEditingController(
+    text: '4',
+  );
+  bool _multiAcksEnabled = false;
 
   // Radio settings
   final TextEditingController _freqController = TextEditingController();
@@ -98,6 +117,9 @@ class _RepeaterSettingsScreenState extends State<RepeaterSettingsScreen> {
     _nameController.dispose();
     _passwordController.dispose();
     _guestPasswordController.dispose();
+    _intThreshController.dispose();
+    _agcResetIntervalController.dispose();
+    _floodMaxController.dispose();
     _freqController.dispose();
     _txPowerController.dispose();
     _latController.dispose();
@@ -263,6 +285,33 @@ class _RepeaterSettingsScreenState extends State<RepeaterSettingsScreen> {
           _privAdvertInterval,
         );
       }
+
+      if (_fetchedSettings.containsKey('int.thresh')) {
+        final threshold = _parseIntWithFallback(
+          _fetchedSettings['int.thresh']!,
+          14,
+        );
+        _intThreshController.text = threshold.toString();
+      }
+      if (_fetchedSettings.containsKey('agc.reset.interval')) {
+        final seconds = _parseIntWithFallback(
+          _fetchedSettings['agc.reset.interval']!,
+          0,
+        );
+        _agcResetIntervalController.text = seconds.toString();
+      }
+      if (_fetchedSettings.containsKey('flood.max')) {
+        final maxHops = _parseIntWithFallback(
+          _fetchedSettings['flood.max']!,
+          4,
+        );
+        _floodMaxController.text = maxHops.toString();
+      }
+      if (_fetchedSettings.containsKey('multi.acks')) {
+        final value = _fetchedSettings['multi.acks']!.trim().toLowerCase();
+        _multiAcksEnabled =
+            value == '1' || value == 'on' || value == 'true';
+      }
     });
   }
 
@@ -322,6 +371,10 @@ class _RepeaterSettingsScreenState extends State<RepeaterSettingsScreen> {
       case 'advert.interval':
       case 'flood.advert.interval':
       case 'priv.advert.interval':
+      case 'int.thresh':
+      case 'agc.reset.interval':
+      case 'flood.max':
+      case 'multi.acks':
         appLog.info('Storing key="$key" value="$value"', tag: 'RadioSettings');
         _fetchedSettings[key] = value;
         break;
@@ -381,10 +434,17 @@ class _RepeaterSettingsScreenState extends State<RepeaterSettingsScreen> {
       case 'advert.interval':
       case 'flood.advert.interval':
       case 'priv.advert.interval':
-        // Interval: non-negative integer (0 means disabled)
+      case 'int.thresh':
+      case 'agc.reset.interval':
+      case 'flood.max':
+        // Interval/threshold: non-negative integer (0 means disabled)
         if (value.contains(',')) return false;
         final interval = int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), ''));
         return interval != null && interval >= 0;
+
+      case 'multi.acks':
+        final lower = value.toLowerCase().trim();
+        return ['on', 'off', 'true', 'false', '1', '0'].contains(lower);
 
       case 'name':
         // Name: any non-empty string, but should NOT look like radio settings
@@ -544,6 +604,56 @@ class _RepeaterSettingsScreenState extends State<RepeaterSettingsScreen> {
     );
   }
 
+  Future<void> _refreshAdvancedSettings() async {
+    final l10n = context.l10n;
+    await _refreshSection(
+      label: l10n.repeater_advancedSettings,
+      commands: const [
+        'get int.thresh',
+        'get agc.reset.interval',
+        'get flood.max',
+        'get multi.acks',
+      ],
+      setRefreshing: (value) => _refreshingAdvanced = value,
+    );
+  }
+
+  Future<void> _refreshInterferenceThreshold() async {
+    final l10n = context.l10n;
+    await _refreshSection(
+      label: l10n.repeater_interferenceThreshold,
+      commands: const ['get int.thresh'],
+      setRefreshing: (value) => _refreshingIntThresh = value,
+    );
+  }
+
+  Future<void> _refreshAgcResetInterval() async {
+    final l10n = context.l10n;
+    await _refreshSection(
+      label: l10n.repeater_agcResetInterval,
+      commands: const ['get agc.reset.interval'],
+      setRefreshing: (value) => _refreshingAgcResetInterval = value,
+    );
+  }
+
+  Future<void> _refreshFloodMax() async {
+    final l10n = context.l10n;
+    await _refreshSection(
+      label: l10n.repeater_floodMaxHops,
+      commands: const ['get flood.max'],
+      setRefreshing: (value) => _refreshingFloodMax = value,
+    );
+  }
+
+  Future<void> _refreshMultiAcks() async {
+    final l10n = context.l10n;
+    await _refreshSection(
+      label: l10n.repeater_multiAcks,
+      commands: const ['get multi.acks'],
+      setRefreshing: (value) => _refreshingMultiAcks = value,
+    );
+  }
+
   Future<void> _loadSettings() async {
     // Just populate with current repeater data on initial load
     // User must click sync button to fetch from device
@@ -591,7 +701,7 @@ class _RepeaterSettingsScreenState extends State<RepeaterSettingsScreen> {
         if (freqMHz != null) {
           final bwKHz = _bandwidth! / 1000;
           commands.add(
-            'set radio ${freqMHz.toStringAsFixed(1)} $bwKHz $_spreadingFactor $_codingRate',
+            'set radio ${_formatFrequencyMHz(freqMHz)} $bwKHz $_spreadingFactor $_codingRate',
           );
         }
       }
@@ -615,6 +725,22 @@ class _RepeaterSettingsScreenState extends State<RepeaterSettingsScreen> {
       if (_privacyMode) {
         commands.add('set priv.advert.interval $_privAdvertInterval');
       }
+
+      // Advanced settings
+      final intThresh = int.tryParse(_intThreshController.text.trim());
+      if (intThresh != null) {
+        commands.add('set int.thresh $intThresh');
+      }
+      final agcResetSeconds =
+          int.tryParse(_agcResetIntervalController.text.trim());
+      if (agcResetSeconds != null) {
+        commands.add('set agc.reset.interval $agcResetSeconds');
+      }
+      final floodMax = int.tryParse(_floodMaxController.text.trim());
+      if (floodMax != null) {
+        commands.add('set flood.max $floodMax');
+      }
+      commands.add('set multi.acks ${_multiAcksEnabled ? 1 : 0}');
 
       // Send all commands
       for (final command in commands) {
@@ -672,6 +798,58 @@ class _RepeaterSettingsScreenState extends State<RepeaterSettingsScreen> {
       setState(() {
         _hasChanges = true;
       });
+    }
+  }
+
+  String _formatFrequencyMHz(double value) {
+    return value
+        .toStringAsFixed(3)
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
+  }
+
+  void _applyRadioPreset(RadioSettings preset) {
+    setState(() {
+      _freqController.text = _formatFrequencyMHz(preset.frequencyMHz);
+      _bandwidth = preset.bandwidth.hz;
+      _spreadingFactor = preset.spreadingFactor.value;
+      _codingRate = preset.codingRate.value;
+      _txPowerController.text = preset.txPowerDbm.toString();
+    });
+    _markChanged();
+  }
+
+  void _applyAppDefaultRadioPreset() {
+    final settingsService = context.read<AppSettingsService>();
+    final locale =
+        Localizations.maybeLocaleOf(context) ??
+        WidgetsBinding.instance.platformDispatcher.locale;
+    final preset = CommunityRadioPreset.resolveProfileSettings(
+      settingsService.settings.defaultRadioProfile,
+      countryCode: locale.countryCode,
+      languageCode: locale.languageCode,
+    );
+    _applyRadioPreset(preset);
+  }
+
+  String _describePreset(CommunityRadioPreset preset) {
+    final bwKHz = preset.settings.bandwidth.hz / 1000;
+    final bwLabel = bwKHz.toStringAsFixed(
+      bwKHz.truncateToDouble() == bwKHz ? 0 : 1,
+    );
+    return '${_formatFrequencyMHz(preset.settings.frequencyMHz)}MHz / SF${preset.settings.spreadingFactor.value} / BW$bwLabel / CR${preset.settings.codingRate.value}';
+  }
+
+  Future<void> _showCommunityPresetDialog() async {
+    final selected = await showDialog<CommunityRadioPreset>(
+      context: context,
+      builder: (context) => _CommunityPresetDialog(
+        presets: CommunityRadioPreset.all,
+        describePreset: _describePreset,
+      ),
+    );
+    if (selected != null) {
+      _applyRadioPreset(selected.settings);
     }
   }
 
@@ -845,6 +1023,8 @@ class _RepeaterSettingsScreenState extends State<RepeaterSettingsScreen> {
                   _buildFeatureTogglesCard(),
                   const SizedBox(height: 16),
                   _buildAdvertisementSettingsCard(),
+                  const SizedBox(height: 16),
+                  _buildAdvancedSettingsCard(),
                   const SizedBox(height: 32),
                   _buildDangerZoneCard(),
                 ],
@@ -922,6 +1102,20 @@ class _RepeaterSettingsScreenState extends State<RepeaterSettingsScreen> {
               onRefresh: _refreshRadioSettings,
             ),
             const Divider(),
+            Row(
+              children: [
+                OutlinedButton(
+                  onPressed: _showCommunityPresetDialog,
+                  child: const Text('Choose Preset'),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: _applyAppDefaultRadioPreset,
+                  child: const Text('Use app default'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: _freqController,
               decoration: InputDecoration(
@@ -1298,6 +1492,133 @@ class _RepeaterSettingsScreenState extends State<RepeaterSettingsScreen> {
     );
   }
 
+  Widget _buildAdvancedSettingsCard() {
+    final l10n = context.l10n;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionHeader(
+              icon: Icons.tune,
+              title: l10n.repeater_advancedSettings,
+              tooltip: l10n.repeater_refreshAdvancedSettings,
+              isRefreshing: _refreshingAdvanced,
+              onRefresh: _refreshAdvancedSettings,
+            ),
+            const Divider(),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _intThreshController,
+                    decoration: InputDecoration(
+                      labelText: l10n.repeater_interferenceThreshold,
+                      helperText: l10n.repeater_interferenceThresholdHelper,
+                      border: const OutlineInputBorder(),
+                      suffixText: 'dB',
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => _markChanged(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _buildInlineRefreshButton(
+                  isRefreshing: _refreshingIntThresh,
+                  onRefresh: _refreshInterferenceThreshold,
+                  tooltip: l10n.repeater_refreshInterferenceThreshold,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _agcResetIntervalController,
+                    decoration: InputDecoration(
+                      labelText: l10n.repeater_agcResetInterval,
+                      helperText: l10n.repeater_agcResetIntervalHelper,
+                      border: const OutlineInputBorder(),
+                      suffixText: 's',
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => _markChanged(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _buildInlineRefreshButton(
+                  isRefreshing: _refreshingAgcResetInterval,
+                  onRefresh: _refreshAgcResetInterval,
+                  tooltip: l10n.repeater_refreshAgcResetInterval,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _floodMaxController,
+                    decoration: InputDecoration(
+                      labelText: l10n.repeater_floodMaxHops,
+                      helperText: l10n.repeater_floodMaxHopsHelper,
+                      border: const OutlineInputBorder(),
+                      suffixText: l10n.repeater_hopsShort,
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => _markChanged(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _buildInlineRefreshButton(
+                  isRefreshing: _refreshingFloodMax,
+                  onRefresh: _refreshFloodMax,
+                  tooltip: l10n.repeater_refreshFloodMaxHops,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: SwitchListTile(
+                    title: Text(l10n.repeater_multiAcks),
+                    subtitle: Text(l10n.repeater_multiAcksHelper),
+                    value: _multiAcksEnabled,
+                    onChanged: (value) {
+                      setState(() {
+                        _multiAcksEnabled = value;
+                      });
+                      _markChanged();
+                    },
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                IconButton(
+                  icon: _refreshingMultiAcks
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh, size: 20),
+                  onPressed: _refreshingMultiAcks ? null : _refreshMultiAcks,
+                  tooltip: l10n.repeater_refreshMultiAcks,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildDangerZoneCard() {
     final l10n = context.l10n;
     final colorScheme = Theme.of(context).colorScheme;
@@ -1459,6 +1780,92 @@ class _RepeaterSettingsScreenState extends State<RepeaterSettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CommunityPresetDialog extends StatefulWidget {
+  final List<CommunityRadioPreset> presets;
+  final String Function(CommunityRadioPreset preset) describePreset;
+
+  const _CommunityPresetDialog({
+    required this.presets,
+    required this.describePreset,
+  });
+
+  @override
+  State<_CommunityPresetDialog> createState() => _CommunityPresetDialogState();
+}
+
+class _CommunityPresetDialogState extends State<_CommunityPresetDialog> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final query = _searchController.text.trim().toLowerCase();
+    final filtered = widget.presets.where((preset) {
+      if (query.isEmpty) return true;
+      final haystack = '${preset.name} ${widget.describePreset(preset)}'
+          .toLowerCase();
+      return haystack.contains(query);
+    }).toList();
+
+    return AlertDialog(
+      title: const Text('Select Radio Settings'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'These presets are suggested by the community.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                hintText: 'Search',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.search),
+                isDense: true,
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  final preset = filtered[index];
+                  return ListTile(
+                    dense: true,
+                    title: Text(preset.name),
+                    subtitle: Text(widget.describePreset(preset)),
+                    onTap: () => Navigator.pop(context, preset),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(context.l10n.common_cancel),
+        ),
+      ],
     );
   }
 }

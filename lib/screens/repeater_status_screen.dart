@@ -8,9 +8,7 @@ import '../models/contact.dart';
 import '../models/path_selection.dart';
 import '../connector/meshcore_connector.dart';
 import '../connector/meshcore_protocol.dart';
-import '../services/app_settings_service.dart';
 import '../services/repeater_command_service.dart';
-import '../utils/battery_utils.dart';
 import '../widgets/path_management_dialog.dart';
 
 class RepeaterStatusScreen extends StatefulWidget {
@@ -181,12 +179,6 @@ class _RepeaterStatusScreenState extends State<RepeaterStatusScreen> {
       _dupDirect = directDups;
       _dupFlood = floodDups;
     });
-    final connector = Provider.of<MeshCoreConnector>(context, listen: false);
-    connector.updateRepeaterBatterySnapshot(
-      widget.repeater.publicKeyHex,
-      batteryMv,
-      source: 'status_binary',
-    );
     _recordStatusResult(true);
   }
 
@@ -209,18 +201,6 @@ class _RepeaterStatusScreenState extends State<RepeaterStatusScreen> {
           _uptimeSecs = _asInt(data['uptime_secs']);
           _queueLen = _asInt(data['queue_len']);
           _debugFlags = _asInt(data['errors']);
-          final batteryMv = _batteryMv;
-          if (batteryMv != null) {
-            final connector = Provider.of<MeshCoreConnector>(
-              context,
-              listen: false,
-            );
-            connector.updateRepeaterBatterySnapshot(
-              widget.repeater.publicKeyHex,
-              batteryMv,
-              source: 'status_text',
-            );
-          }
         } else if (data.containsKey('noise_floor')) {
           _noiseFloor = _asInt(data['noise_floor']);
           _lastRssi = _asInt(data['last_rssi']);
@@ -610,24 +590,18 @@ class _RepeaterStatusScreenState extends State<RepeaterStatusScreen> {
   }
 
   String _batteryText() {
-    final connector = context.watch<MeshCoreConnector>();
-    final batteryMv =
-        connector.getRepeaterBatteryMillivolts(widget.repeater.publicKeyHex) ??
-        _batteryMv;
-    if (batteryMv == null) return '—';
-    final percent = estimateBatteryPercentFromMillivolts(
-      batteryMv,
-      _batteryChemistry(),
-    );
-    final volts = (batteryMv / 1000.0).toStringAsFixed(2);
+    if (_batteryMv == null) return '—';
+    final percent = _batteryPercentFromMv(_batteryMv!);
+    final volts = (_batteryMv! / 1000.0).toStringAsFixed(2);
     return '$percent% / ${volts}V';
   }
 
-  String _batteryChemistry() {
-    final settingsService = context.read<AppSettingsService>();
-    return settingsService.batteryChemistryForRepeater(
-      widget.repeater.publicKeyHex,
-    );
+  int _batteryPercentFromMv(int millivolts) {
+    const minMv = 3000;
+    const maxMv = 4200;
+    if (millivolts <= minMv) return 0;
+    if (millivolts >= maxMv) return 100;
+    return (((millivolts - minMv) * 100) / (maxMv - minMv)).round();
   }
 
   String _clockText() {

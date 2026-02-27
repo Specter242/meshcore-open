@@ -44,6 +44,26 @@ enum LoRaCodingRate {
   const LoRaCodingRate(this.value, this.label);
 }
 
+class RadioDefaultProfile {
+  static const String regionAuto = 'region_auto';
+  static const String repeaterDefault = 'repeater_default';
+  static const String preset915MHz = '915mhz';
+  static const String preset868MHz = '868mhz';
+  static const String preset433MHz = '433mhz';
+  static const String longRange = 'long_range';
+  static const String fastSpeed = 'fast_speed';
+
+  static const List<String> values = [
+    regionAuto,
+    repeaterDefault,
+    preset915MHz,
+    preset868MHz,
+    preset433MHz,
+    longRange,
+    fastSpeed,
+  ];
+}
+
 class RadioSettings {
   final double frequencyMHz;
   final LoRaBandwidth bandwidth;
@@ -59,200 +79,160 @@ class RadioSettings {
     required this.txPowerDbm,
   });
 
-  // Regional preset configurations
-  static final List<(String, RadioSettings)> presets = [
-    (
-      'Australia',
-      RadioSettings(
-        frequencyMHz: 915.8,
-        bandwidth: LoRaBandwidth.bw250,
-        spreadingFactor: LoRaSpreadingFactor.sf10,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 20,
-      ),
-    ),
-    (
-      'Australia (Narrow)',
-      RadioSettings(
-        frequencyMHz: 916.575,
-        bandwidth: LoRaBandwidth.bw62_5,
-        spreadingFactor: LoRaSpreadingFactor.sf7,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 20,
-      ),
-    ),
-    (
-      'Australia SA, WA, QLD',
-      RadioSettings(
-        frequencyMHz: 923.125,
-        bandwidth: LoRaBandwidth.bw62_5,
-        spreadingFactor: LoRaSpreadingFactor.sf8,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 20,
-      ),
-    ),
-    (
-      'Czech Republic',
-      RadioSettings(
-        frequencyMHz: 869.432,
-        bandwidth: LoRaBandwidth.bw62_5,
-        spreadingFactor: LoRaSpreadingFactor.sf7,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 14,
-      ),
-    ),
-    (
-      'EU 433MHz',
-      RadioSettings(
-        frequencyMHz: 433.650,
-        bandwidth: LoRaBandwidth.bw250,
-        spreadingFactor: LoRaSpreadingFactor.sf11,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 20,
-      ),
-    ),
-    (
-      'EU/UK (Long Range)',
-      RadioSettings(
-        frequencyMHz: 869.525,
-        bandwidth: LoRaBandwidth.bw250,
-        spreadingFactor: LoRaSpreadingFactor.sf11,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 14,
-      ),
-    ),
-    (
-      'EU/UK (Medium Range)',
-      RadioSettings(
-        frequencyMHz: 869.525,
-        bandwidth: LoRaBandwidth.bw250,
-        spreadingFactor: LoRaSpreadingFactor.sf10,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 14,
-      ),
-    ),
-    (
-      'EU/UK (Narrow)',
-      RadioSettings(
-        frequencyMHz: 869.618,
-        bandwidth: LoRaBandwidth.bw62_5,
-        spreadingFactor: LoRaSpreadingFactor.sf8,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 14,
-      ),
-    ),
-    (
-      'New Zealand',
-      RadioSettings(
-        frequencyMHz: 917.375,
-        bandwidth: LoRaBandwidth.bw250,
-        spreadingFactor: LoRaSpreadingFactor.sf11,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 20,
-      ),
-    ),
-    (
-      'New Zealand (Narrow)',
-      RadioSettings(
-        frequencyMHz: 917.375,
-        bandwidth: LoRaBandwidth.bw62_5,
-        spreadingFactor: LoRaSpreadingFactor.sf7,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 20,
-      ),
-    ),
-    (
-      'Portugal 433',
-      RadioSettings(
-        frequencyMHz: 433.375,
-        bandwidth: LoRaBandwidth.bw62_5,
-        spreadingFactor: LoRaSpreadingFactor.sf9,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 20,
-      ),
-    ),
-    (
-      'Portugal 869',
-      RadioSettings(
-        frequencyMHz: 869.618,
-        bandwidth: LoRaBandwidth.bw62_5,
-        spreadingFactor: LoRaSpreadingFactor.sf7,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 14,
-      ),
-    ),
-    (
-      'Switzerland',
-      RadioSettings(
-        frequencyMHz: 869.618,
-        bandwidth: LoRaBandwidth.bw62_5,
-        spreadingFactor: LoRaSpreadingFactor.sf8,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 14,
-      ),
-    ),
-    (
-      'USA Arizona',
-      RadioSettings(
-        frequencyMHz: 908.205,
-        bandwidth: LoRaBandwidth.bw62_5,
-        spreadingFactor: LoRaSpreadingFactor.sf10,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 20,
-      ),
-    ),
-    (
-      'USA/Canada',
-      RadioSettings(
-        frequencyMHz: 910.525,
-        bandwidth: LoRaBandwidth.bw62_5,
-        spreadingFactor: LoRaSpreadingFactor.sf7,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 20,
-      ),
-    ),
-    (
-      'Vietnam',
-      RadioSettings(
-        frequencyMHz: 920.250,
-        bandwidth: LoRaBandwidth.bw250,
-        spreadingFactor: LoRaSpreadingFactor.sf11,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 20,
-      ),
-    ),
-    // Off-grid repeat presets (valid client_repeat frequencies)
-    (
-      'Off-Grid 433',
-      RadioSettings(
-        frequencyMHz: 433.0,
-        bandwidth: LoRaBandwidth.bw250,
-        spreadingFactor: LoRaSpreadingFactor.sf11,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 20,
-      ),
-    ),
-    (
-      'Off-Grid 869',
-      RadioSettings(
-        frequencyMHz: 869.0,
-        bandwidth: LoRaBandwidth.bw250,
-        spreadingFactor: LoRaSpreadingFactor.sf11,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 14,
-      ),
-    ),
-    (
-      'Off-Grid 918',
-      RadioSettings(
-        frequencyMHz: 918.0,
-        bandwidth: LoRaBandwidth.bw250,
-        spreadingFactor: LoRaSpreadingFactor.sf11,
-        codingRate: LoRaCodingRate.cr4_5,
-        txPowerDbm: 20,
-      ),
-    ),
-  ];
+  // Preset configurations
+  static RadioSettings get preset915MHz => RadioSettings(
+    frequencyMHz: 915.0,
+    bandwidth: LoRaBandwidth.bw125,
+    spreadingFactor: LoRaSpreadingFactor.sf7,
+    codingRate: LoRaCodingRate.cr4_5,
+    txPowerDbm: 20,
+  );
+
+  static RadioSettings get preset868MHz => RadioSettings(
+    frequencyMHz: 868.0,
+    bandwidth: LoRaBandwidth.bw125,
+    spreadingFactor: LoRaSpreadingFactor.sf7,
+    codingRate: LoRaCodingRate.cr4_5,
+    txPowerDbm: 14,
+  );
+
+  static RadioSettings get preset433MHz => RadioSettings(
+    frequencyMHz: 433.0,
+    bandwidth: LoRaBandwidth.bw125,
+    spreadingFactor: LoRaSpreadingFactor.sf7,
+    codingRate: LoRaCodingRate.cr4_5,
+    txPowerDbm: 20,
+  );
+
+  static RadioSettings get presetLongRange => RadioSettings(
+    frequencyMHz: 915.0,
+    bandwidth: LoRaBandwidth.bw125,
+    spreadingFactor: LoRaSpreadingFactor.sf12,
+    codingRate: LoRaCodingRate.cr4_8,
+    txPowerDbm: 20,
+  );
+
+  static RadioSettings get presetFastSpeed => RadioSettings(
+    frequencyMHz: 915.0,
+    bandwidth: LoRaBandwidth.bw500,
+    spreadingFactor: LoRaSpreadingFactor.sf7,
+    codingRate: LoRaCodingRate.cr4_5,
+    txPowerDbm: 20,
+  );
+
+  // Matches MeshCore repeater software documented default radio plan.
+  static RadioSettings get presetRepeaterDefault => RadioSettings(
+    frequencyMHz: 869.525,
+    bandwidth: LoRaBandwidth.bw250,
+    spreadingFactor: LoRaSpreadingFactor.sf11,
+    codingRate: LoRaCodingRate.cr4_5,
+    txPowerDbm: 20,
+  );
+
+  static RadioSettings fromDefaultProfile(
+    String profile, {
+    String? countryCode,
+    String? languageCode,
+  }) {
+    switch (profile) {
+      case RadioDefaultProfile.preset915MHz:
+        return preset915MHz;
+      case RadioDefaultProfile.repeaterDefault:
+        return presetRepeaterDefault;
+      case RadioDefaultProfile.preset868MHz:
+        return preset868MHz;
+      case RadioDefaultProfile.preset433MHz:
+        return preset433MHz;
+      case RadioDefaultProfile.longRange:
+        return presetLongRange;
+      case RadioDefaultProfile.fastSpeed:
+        return presetFastSpeed;
+      case RadioDefaultProfile.regionAuto:
+      default:
+        return fromRegion(countryCode: countryCode, languageCode: languageCode);
+    }
+  }
+
+  static RadioSettings fromRegion({String? countryCode, String? languageCode}) {
+    final country = countryCode?.toUpperCase();
+    if (country != null) {
+      if (_regions915.contains(country)) return preset915MHz;
+      if (_regions868.contains(country)) return preset868MHz;
+      if (_regions433.contains(country)) return preset433MHz;
+    }
+
+    // Fallback by language when country code is unavailable.
+    final language = languageCode?.toLowerCase();
+    if (language != null && _languagesLikely868.contains(language)) {
+      return preset868MHz;
+    }
+    return preset915MHz;
+  }
+
+  static const Set<String> _regions915 = {
+    'US',
+    'CA',
+    'AU',
+    'NZ',
+    'MX',
+    'AR',
+    'BR',
+    'CL',
+    'CO',
+    'PE',
+  };
+
+  static const Set<String> _regions868 = {
+    'AT',
+    'BE',
+    'BG',
+    'CH',
+    'CY',
+    'CZ',
+    'DE',
+    'DK',
+    'EE',
+    'ES',
+    'FI',
+    'FR',
+    'GB',
+    'GR',
+    'HR',
+    'HU',
+    'IE',
+    'IS',
+    'IT',
+    'LT',
+    'LU',
+    'LV',
+    'MT',
+    'NL',
+    'NO',
+    'PL',
+    'PT',
+    'RO',
+    'SE',
+    'SI',
+    'SK',
+  };
+
+  static const Set<String> _regions433 = {'IN'};
+
+  static const Set<String> _languagesLikely868 = {
+    'bg',
+    'de',
+    'es',
+    'fr',
+    'it',
+    'nl',
+    'pl',
+    'pt',
+    'ru',
+    'sk',
+    'sl',
+    'sv',
+    'uk',
+  };
 
   int get frequencyHz => (frequencyMHz * 1000).round();
   int get bandwidthHz => bandwidth.hz;

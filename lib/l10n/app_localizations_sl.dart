@@ -138,20 +138,28 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
+  String scanner_reconnecting(String deviceName) {
+    return 'Reconnecting to $deviceName...';
+  }
+
+  @override
+  String scanner_waitingForDevice(String deviceName) {
+    return 'Waiting for $deviceName...';
+  }
+
+  @override
+  String scanner_lostConnection(String deviceName) {
+    return 'Lost connection to $deviceName';
+  }
+
+  @override
+  String get scanner_reconnect => 'Reconnect';
+
+  @override
   String get scanner_stop => 'Prekliči';
 
   @override
   String get scanner_scan => 'Skeniraj';
-
-  @override
-  String get scanner_bluetoothOff => 'Bluetooth je izklopljen';
-
-  @override
-  String get scanner_bluetoothOffMessage =>
-      'Prosimo, vklopite Bluetooth, da lahko poiščete naprave.';
-
-  @override
-  String get scanner_enableBluetooth => 'Omogočite Bluetooth';
 
   @override
   String get device_quickSwitch => 'Hitro preklop';
@@ -320,10 +328,6 @@ class AppLocalizationsSl extends AppLocalizations {
       'Odprtokodni Flutter klient za naprave za LoRa omrežje MeshCore.';
 
   @override
-  String get settings_aboutOpenMeteoAttribution =>
-      'Podatki o višini LOS: Open-Meteo (CC BY 4.0)';
-
-  @override
   String get settings_infoName => 'Ime';
 
   @override
@@ -346,6 +350,15 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get settings_presets => 'Prednastavitve';
+
+  @override
+  String get settings_preset915Mhz => '915 MHz';
+
+  @override
+  String get settings_preset868Mhz => '868 MHz';
+
+  @override
+  String get settings_preset433Mhz => '433 MHz';
 
   @override
   String get settings_frequency => 'Frekvenca (MHz)';
@@ -375,15 +388,10 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settings_txPowerInvalid => 'Neveljavna TX moč (0-22 dBm)';
 
   @override
-  String get settings_clientRepeat => 'Neovadno ponavljanje';
+  String get settings_longRange => 'DDolg doseg';
 
   @override
-  String get settings_clientRepeatSubtitle =>
-      'Omogočite temu naprave, da ponavlja paketne sporočila za druge.';
-
-  @override
-  String get settings_clientRepeatFreqWarning =>
-      'Za ponovni prenos na brezžični način so potrebne frekvence 433, 869 ali 918 MHz.';
+  String get settings_fastSpeed => 'Visoka hitrost';
 
   @override
   String settings_error(String message) {
@@ -460,13 +468,6 @@ class AppLocalizationsSl extends AppLocalizations {
   String get appSettings_languageUk => 'Ukrajinsko';
 
   @override
-  String get appSettings_enableMessageTracing => 'Omogoči sledenje sporočilom';
-
-  @override
-  String get appSettings_enableMessageTracingSubtitle =>
-      'Prikaži podrobne metapodatke o usmerjanju in časovnem usklajevanju sporočil';
-
-  @override
   String get appSettings_notifications => 'Obvestila';
 
   @override
@@ -507,6 +508,22 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get appSettings_advertisementNotificationsSubtitle =>
       'Pokaži obvestilo, ko so najdene nove naprave.';
+
+  @override
+  String get appSettings_connection => 'Connection';
+
+  @override
+  String get appSettings_autoReconnect => 'Automatically reconnect';
+
+  @override
+  String get appSettings_autoReconnectSubtitle =>
+      'Keep trying to reach your companion when Bluetooth connection is lost, including after extended time out of range.';
+
+  @override
+  String get appSettings_autoReconnectEnabled => 'Auto-reconnect enabled';
+
+  @override
+  String get appSettings_autoReconnectDisabled => 'Auto-reconnect disabled';
 
   @override
   String get appSettings_messaging => 'Komuniciranje';
@@ -627,15 +644,6 @@ class AppLocalizationsSl extends AppLocalizations {
   String get appSettings_offlineMapCache => 'Shramba zemljevidov brez povezave';
 
   @override
-  String get appSettings_unitsTitle => 'Enote';
-
-  @override
-  String get appSettings_unitsMetric => 'Metrična (m/km)';
-
-  @override
-  String get appSettings_unitsImperial => 'Imperialno (ft / mi)';
-
-  @override
   String get appSettings_noAreaSelected => 'Območje ni izbrano';
 
   @override
@@ -662,6 +670,51 @@ class AppLocalizationsSl extends AppLocalizations {
       'Beleženje napak v aplikacije onemogočeno.';
 
   @override
+  String get appSettings_roomSyncTitle => 'Room Sync';
+
+  @override
+  String get appSettings_roomSyncEnableTitle => 'Enable room auto-sync';
+
+  @override
+  String get appSettings_roomSyncEnableSubtitle =>
+      'Automatically keep room-server backlog synced while connected.';
+
+  @override
+  String get appSettings_roomSyncAutoLoginTitle =>
+      'Auto-login saved room sessions';
+
+  @override
+  String get appSettings_roomSyncAutoLoginSubtitle =>
+      'On reconnect, login to room servers with saved passwords.';
+
+  @override
+  String get appSettings_roomSyncBaseIntervalTitle => 'Base sync interval';
+
+  @override
+  String get appSettings_roomSyncBaseIntervalDialog =>
+      'Base sync interval (seconds)';
+
+  @override
+  String get appSettings_roomSyncMaxBackoffTitle => 'Max backoff interval';
+
+  @override
+  String get appSettings_roomSyncMaxBackoffDialog =>
+      'Max backoff interval (seconds)';
+
+  @override
+  String get appSettings_roomSyncTimeoutTitle => 'Sync timeout';
+
+  @override
+  String get appSettings_roomSyncTimeoutDialog => 'Sync timeout (seconds)';
+
+  @override
+  String get appSettings_roomSyncStaleAfterTitle => 'Mark room stale after';
+
+  @override
+  String get appSettings_roomSyncStaleAfterDialog =>
+      'Stale threshold (minutes)';
+
+  @override
   String get contacts_title => 'Stiki';
 
   @override
@@ -672,35 +725,7 @@ class AppLocalizationsSl extends AppLocalizations {
       'Stiki se bodo prikazali, ko se naprave oglasijo.';
 
   @override
-  String get contacts_unread => 'Neprebrano';
-
-  @override
-  String get contacts_searchContactsNoNumber => 'Iskanje stikov...';
-
-  @override
-  String contacts_searchContacts(int number, String str) {
-    return 'Iskanje stikov...';
-  }
-
-  @override
-  String contacts_searchFavorites(int number, String str) {
-    return 'Iskanje $number$str priljubljenih...';
-  }
-
-  @override
-  String contacts_searchUsers(int number, String str) {
-    return 'Išči $number$str uporabnikov...';
-  }
-
-  @override
-  String contacts_searchRepeaters(int number, String str) {
-    return 'Išči $number$str ponavljalnike...';
-  }
-
-  @override
-  String contacts_searchRoomServers(int number, String str) {
-    return 'Išči $number$str strežnikov sob...';
-  }
+  String get contacts_searchContacts => 'Iskanje stikov...';
 
   @override
   String get contacts_noUnreadContacts => 'Ne prebrani stiki.';
@@ -724,6 +749,13 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get contacts_roomLogin => 'Prijava v sobo';
+
+  @override
+  String get contacts_roomAutoSyncTitle => 'Auto-sync this room';
+
+  @override
+  String get contacts_roomAutoSyncSubtitle =>
+      'Enable automatic login and background catch-up sync for this room.';
 
   @override
   String get contacts_openChat => 'Odpri klepet';
@@ -826,22 +858,11 @@ class AppLocalizationsSl extends AppLocalizations {
   String get channels_editChannel => 'Uredi kanal';
 
   @override
-  String get channels_muteChannel => 'Utišaj kanal';
-
-  @override
-  String get channels_unmuteChannel => 'Vklopi obvestila kanala';
-
-  @override
   String get channels_deleteChannel => 'Pošlji kanal';
 
   @override
   String channels_deleteChannelConfirm(String name) {
     return 'Izbrišem \"$name\"? To se ne da povrniti.';
-  }
-
-  @override
-  String channels_channelDeleteFailed(String name) {
-    return 'Kanala $name ni bilo mogoče izbrisati';
   }
 
   @override
@@ -1132,9 +1153,6 @@ class AppLocalizationsSl extends AppLocalizations {
   String get chat_pathManagement => 'Upravljanje poti';
 
   @override
-  String get chat_ShowAllPaths => 'Prikaži vse poti';
-
-  @override
   String get chat_routingMode => 'Navodilo za usmerjevalni način';
 
   @override
@@ -1291,12 +1309,6 @@ class AppLocalizationsSl extends AppLocalizations {
   String get map_title => 'Mapa omrežja';
 
   @override
-  String get map_lineOfSight => 'Linija vida';
-
-  @override
-  String get map_losScreenTitle => 'Linija vida';
-
-  @override
   String get map_noNodesWithLocation =>
       'Nihče od notranjih elementov nima podatkov o lokaciji.';
 
@@ -1425,18 +1437,6 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get map_manageRepeater => 'Upravljajte Ponovitve';
-
-  @override
-  String get map_tapToAdd => 'Pritisnite na vozlišča, da jih dodate poti.';
-
-  @override
-  String get map_runTrace => 'Zaženi sledenje poti';
-
-  @override
-  String get map_removeLast => 'Odstrani Zadnji';
-
-  @override
-  String get map_pathTraceCancelled => 'Spremljanje poti je prekinjeno.';
 
   @override
   String get mapCache_title =>
@@ -1736,10 +1736,10 @@ class AppLocalizationsSl extends AppLocalizations {
       'Pošlji ukazne povelje na ponovitveno enoto.';
 
   @override
-  String get repeater_neighbors => 'Sosedi';
+  String get repeater_neighbours => 'Sosedi';
 
   @override
-  String get repeater_neighborsSubtitle => 'Pogledati nič sosednjih hopjev.';
+  String get repeater_neighboursSubtitle => 'Pogledati nič sosednjih hopjev.';
 
   @override
   String get repeater_settings => 'Nastavitve';
@@ -1892,6 +1892,40 @@ class AppLocalizationsSl extends AppLocalizations {
   String get repeater_txPowerHelper => '1-30 dBm';
 
   @override
+  String get repeater_advancedSettings => 'Advanced Settings';
+
+  @override
+  String get repeater_interferenceThreshold => 'Interference Threshold';
+
+  @override
+  String get repeater_interferenceThresholdHelper =>
+      'dB threshold (default 14). Set 0 to disable channel interference detection.';
+
+  @override
+  String get repeater_agcResetInterval => 'AGC Reset Interval';
+
+  @override
+  String get repeater_agcResetIntervalHelper =>
+      'Seconds between AGC resets. Set 0 to disable.';
+
+  @override
+  String get repeater_floodMaxHops => 'Flood Max Hops';
+
+  @override
+  String get repeater_floodMaxHopsHelper =>
+      'Maximum hops for forwarding inbound flood packets.';
+
+  @override
+  String get repeater_multiAcks => 'Multi ACKs';
+
+  @override
+  String get repeater_multiAcksHelper =>
+      'Enable double ACK behavior (0 or 1 in firmware).';
+
+  @override
+  String get repeater_hopsShort => 'hops';
+
+  @override
   String get repeater_bandwidth => 'Pasovna širina';
 
   @override
@@ -2028,6 +2062,22 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get repeater_refreshRadioSettings => 'Ponovno Nastavitve Radija';
+
+  @override
+  String get repeater_refreshAdvancedSettings => 'Refresh Advanced Settings';
+
+  @override
+  String get repeater_refreshInterferenceThreshold =>
+      'Refresh interference threshold';
+
+  @override
+  String get repeater_refreshAgcResetInterval => 'Refresh AGC reset interval';
+
+  @override
+  String get repeater_refreshFloodMaxHops => 'Refresh flood max hops';
+
+  @override
+  String get repeater_refreshMultiAcks => 'Refresh multi ACKs';
 
   @override
   String get repeater_refreshTxPower => 'Ponovno nastavi TX moč';
@@ -2435,7 +2485,7 @@ class AppLocalizationsSl extends AppLocalizations {
   }
 
   @override
-  String get neighbors_repeatersNeighbors => 'Ponovitve Sosedi';
+  String get neighbors_repeatersNeighbours => 'Ponovitve Sosedi';
 
   @override
   String get neighbors_noData => 'Niso na voljo podatki o sosedih.';
@@ -2744,13 +2794,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get listFilter_all => 'Vse';
 
   @override
-  String get listFilter_favorites => 'Priljubljene';
-
-  @override
-  String get listFilter_addToFavorites => 'Dodaj v priljubljene';
-
-  @override
-  String get listFilter_removeFromFavorites => 'Odstrani iz priljubljenih';
+  String get listFilter_favorites => 'Favorites';
 
   @override
   String get listFilter_users => 'Uporabniki';
@@ -2782,147 +2826,6 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get pathTrace_someHopsNoLocation =>
       'Ena ali več hmelju manjka lokacija!';
-
-  @override
-  String get pathTrace_clearTooltip => 'Počisti pot';
-
-  @override
-  String get losSelectStartEnd => 'Izberite začetno in končno vozlišče za LOS.';
-
-  @override
-  String losRunFailed(String error) {
-    return 'Preverjanje vidnega polja ni uspelo: $error';
-  }
-
-  @override
-  String get losClearAllPoints => 'Počisti vse točke';
-
-  @override
-  String get losRunToViewElevationProfile =>
-      'Zaženite LOS za ogled višinskega profila';
-
-  @override
-  String get losMenuTitle => 'LOS meni';
-
-  @override
-  String get losMenuSubtitle =>
-      'Tapnite vozlišča ali dolgo pritisnite na zemljevid za točke po meri';
-
-  @override
-  String get losShowDisplayNodes => 'Pokaži prikazna vozlišča';
-
-  @override
-  String get losCustomPoints => 'Točke po meri';
-
-  @override
-  String losCustomPointLabel(int index) {
-    return 'Po meri $index';
-  }
-
-  @override
-  String get losPointA => 'Točka A';
-
-  @override
-  String get losPointB => 'Točka B';
-
-  @override
-  String losAntennaA(String value, String unit) {
-    return 'Antena A: $value $unit';
-  }
-
-  @override
-  String losAntennaB(String value, String unit) {
-    return 'Antena B: $value $unit';
-  }
-
-  @override
-  String get losRun => 'Zaženi LOS';
-
-  @override
-  String get losNoElevationData => 'Ni podatkov o višini';
-
-  @override
-  String losProfileClear(
-    String distance,
-    String distanceUnit,
-    String clearance,
-    String heightUnit,
-  ) {
-    return '$distance $distanceUnit, čisti LOS, najmanjša razdalja $clearance $heightUnit';
-  }
-
-  @override
-  String losProfileBlocked(
-    String distance,
-    String distanceUnit,
-    String obstruction,
-    String heightUnit,
-  ) {
-    return '$distance $distanceUnit, blokiral $obstruction $heightUnit';
-  }
-
-  @override
-  String get losStatusChecking => 'LOS: preverjam ...';
-
-  @override
-  String get losStatusNoData => 'LOS: ni podatkov';
-
-  @override
-  String losStatusSummary(int clear, int total, int blocked, int unknown) {
-    return 'LOS: $clear/$total jasno, $blocked blokirano, $unknown neznano';
-  }
-
-  @override
-  String get losErrorElevationUnavailable =>
-      'Podatki o nadmorski višini niso na voljo za enega ali več vzorcev.';
-
-  @override
-  String get losErrorInvalidInput =>
-      'Neveljavni podatki o točkah/višini za izračun LOS.';
-
-  @override
-  String get losRenameCustomPoint => 'Preimenujte točko po meri';
-
-  @override
-  String get losPointName => 'Ime točke';
-
-  @override
-  String get losShowPanelTooltip => 'Pokaži ploščo LOS';
-
-  @override
-  String get losHidePanelTooltip => 'Skrij ploščo LOS';
-
-  @override
-  String get losElevationAttribution =>
-      'Podatki o višini: Open-Meteo (CC BY 4.0)';
-
-  @override
-  String get losLegendRadioHorizon => 'Radijski horizont';
-
-  @override
-  String get losLegendLosBeam => 'Linija vidnosti';
-
-  @override
-  String get losLegendTerrain => 'Teren';
-
-  @override
-  String get losFrequencyLabel => 'Frekvenca';
-
-  @override
-  String get losFrequencyInfoTooltip => 'Prikaži podrobnosti izračuna';
-
-  @override
-  String get losFrequencyDialogTitle => 'Izračun radijskega horizonta';
-
-  @override
-  String losFrequencyDialogDescription(
-    double baselineK,
-    double baselineFreq,
-    double frequencyMHz,
-    double kFactor,
-  ) {
-    return 'Začenši od k=$baselineK pri $baselineFreq MHz, izračun prilagodi k-faktor za trenutni pas $frequencyMHz MHz, ki določa ukrivljeno zgornjo mejo radijskega horizonta.';
-  }
 
   @override
   String get contacts_pathTrace => 'Sledenje poti';
@@ -2994,6 +2897,30 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get contacts_contactAdvertCopyFailed =>
       'Kopiranje oglasa v odložišče je spodletelo.';
+
+  @override
+  String get roomSync_statusOff => 'Room sync off';
+
+  @override
+  String get roomSync_statusDisabled => 'Sync disabled';
+
+  @override
+  String get roomSync_statusSyncing => 'Syncing...';
+
+  @override
+  String get roomSync_statusConnectedWaiting => 'Connected, waiting sync';
+
+  @override
+  String get roomSync_statusConnectedStale => 'Connected, stale';
+
+  @override
+  String get roomSync_statusConnectedSynced => 'Connected, synced';
+
+  @override
+  String get roomSync_statusNotLoggedIn => 'Not logged in';
+
+  @override
+  String get roomSync_statusNotSynced => 'Not synced';
 
   @override
   String get notification_activityTitle => 'Aktivnost MeshCore';
@@ -3097,10 +3024,4 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get settings_gpxExportShareSubject =>
       'meshcore-open izvoz podatkov GPX karte';
-
-  @override
-  String get snrIndicator_nearByRepeaters => 'Bližnji ponovitelji';
-
-  @override
-  String get snrIndicator_lastSeen => 'Zadnjič videno';
 }

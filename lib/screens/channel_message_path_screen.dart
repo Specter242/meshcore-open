@@ -9,38 +9,26 @@ import 'package:provider/provider.dart';
 
 import '../connector/meshcore_connector.dart';
 import '../services/map_tile_cache_service.dart';
-import '../services/app_settings_service.dart';
 import '../connector/meshcore_protocol.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/l10n.dart';
 import '../models/channel_message.dart';
-import '../models/app_settings.dart';
 import '../models/contact.dart';
-import '../widgets/adaptive_app_bar_title.dart';
 
 class ChannelMessagePathScreen extends StatelessWidget {
   final ChannelMessage message;
-  final bool channelMessage;
-  const ChannelMessagePathScreen({
-    super.key,
-    required this.message,
-    this.channelMessage = false,
-  });
+
+  const ChannelMessagePathScreen({super.key, required this.message});
 
   @override
   Widget build(BuildContext context) {
     return Consumer<MeshCoreConnector>(
       builder: (context, connector, _) {
         final l10n = context.l10n;
-        final primaryPathTmp = _selectPrimaryPath(
+        final primaryPath = _selectPrimaryPath(
           message.pathBytes,
           message.pathVariants,
         );
-
-        final primaryPath = !channelMessage && !message.isOutgoing
-            ? Uint8List.fromList(primaryPathTmp.reversed.toList())
-            : primaryPathTmp;
-
         final hops = _buildPathHops(primaryPath, connector.contacts, l10n);
         final hasHopDetails = primaryPath.isNotEmpty;
         final observedLabel = _formatObservedHops(
@@ -49,9 +37,10 @@ class ChannelMessagePathScreen extends StatelessWidget {
           l10n,
         );
         final extraPaths = _otherPaths(primaryPath, message.pathVariants);
+
         return Scaffold(
           appBar: AppBar(
-            title: AdaptiveAppBarTitle(l10n.channelPath_title),
+            title: Text(l10n.channelPath_title),
             actions: [
               IconButton(
                 icon: const Icon(Icons.radar_outlined),
@@ -61,9 +50,9 @@ class ChannelMessagePathScreen extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (context) => PathTraceMapScreen(
                       title: context.l10n.contacts_repeaterPathTrace,
-                      path: primaryPath,
+                      path: Uint8List.fromList(primaryPath),
                       flipPathRound: true,
-                      reversePathRound: !message.isOutgoing && !channelMessage,
+                      reversePathRound: true,
                     ),
                   ),
                 ),
@@ -73,7 +62,7 @@ class ChannelMessagePathScreen extends StatelessWidget {
                 tooltip: l10n.channelPath_viewMap,
                 onPressed: hasHopDetails
                     ? () {
-                        _openPathMap(context, channelMessage: channelMessage);
+                        _openPathMap(context);
                       }
                     : null,
               ),
@@ -168,11 +157,7 @@ class ChannelMessagePathScreen extends StatelessWidget {
               ),
               subtitle: Text(_formatPathPrefixes(variants[i])),
               trailing: const Icon(Icons.map_outlined, size: 20),
-              onTap: () => _openPathMap(
-                context,
-                initialPath: variants[i],
-                channelMessage: channelMessage,
-              ),
+              onTap: () => _openPathMap(context, initialPath: variants[i]),
             ),
           ),
       ],
@@ -263,18 +248,13 @@ class ChannelMessagePathScreen extends StatelessWidget {
     );
   }
 
-  void _openPathMap(
-    BuildContext context, {
-    Uint8List? initialPath,
-    bool channelMessage = false,
-  }) {
+  void _openPathMap(BuildContext context, {Uint8List? initialPath}) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ChannelMessagePathMapScreen(
           message: message,
           initialPath: initialPath,
-          channelMessage: channelMessage,
         ),
       ),
     );
@@ -284,13 +264,11 @@ class ChannelMessagePathScreen extends StatelessWidget {
 class ChannelMessagePathMapScreen extends StatefulWidget {
   final ChannelMessage message;
   final Uint8List? initialPath;
-  final bool channelMessage;
 
   const ChannelMessagePathMapScreen({
     super.key,
     required this.message,
     this.initialPath,
-    this.channelMessage = false,
   });
 
   @override
@@ -300,12 +278,8 @@ class ChannelMessagePathMapScreen extends StatefulWidget {
 
 class _ChannelMessagePathMapScreenState
     extends State<ChannelMessagePathMapScreen> {
-  static const double _labelZoomThreshold = 8.5;
-
   Uint8List? _selectedPath;
   double _pathDistance = 0.0;
-  bool _showNodeLabels = true;
-  bool _didReceivePositionUpdate = false;
 
   @override
   void initState() {
@@ -340,8 +314,6 @@ class _ChannelMessagePathMapScreenState
   Widget build(BuildContext context) {
     return Consumer<MeshCoreConnector>(
       builder: (context, connector, _) {
-        final settings = context.watch<AppSettingsService>().settings;
-        final isImperial = settings.unitSystem == UnitSystem.imperial;
         final tileCache = context.read<MapTileCacheService>();
         final primaryPath = _selectPrimaryPath(
           widget.message.pathBytes,
@@ -351,18 +323,11 @@ class _ChannelMessagePathMapScreenState
           primaryPath,
           widget.message.pathVariants,
         );
-        final selectedPathTmp = _resolveSelectedPath(
+        final selectedPath = _resolveSelectedPath(
           _selectedPath,
           observedPaths,
           primaryPath,
         );
-
-        final selectedPath =
-            ((!widget.message.isOutgoing && !widget.channelMessage) ||
-                (widget.message.isOutgoing && widget.channelMessage))
-            ? Uint8List.fromList(selectedPathTmp.reversed.toList())
-            : selectedPathTmp;
-
         final selectedIndex = _indexForPath(selectedPath, observedPaths);
         final hops = _buildPathHops(
           selectedPath,
@@ -371,22 +336,12 @@ class _ChannelMessagePathMapScreenState
         );
 
         final points = <LatLng>[];
-
-        if ((widget.message.isOutgoing && !widget.channelMessage) ||
-            (widget.message.isOutgoing && widget.channelMessage)) {
-          points.add(LatLng(connector.selfLatitude!, connector.selfLongitude!));
-        }
-
         for (final hop in hops) {
           if (hop.hasLocation) {
             points.add(hop.position!);
           }
         }
-
-        if ((!widget.message.isOutgoing && !widget.channelMessage) ||
-            (!widget.message.isOutgoing && widget.channelMessage)) {
-          points.add(LatLng(connector.selfLatitude!, connector.selfLongitude!));
-        }
+        points.add(LatLng(connector.selfLatitude!, connector.selfLongitude!));
 
         final polylines = points.length > 1
             ? [
@@ -402,9 +357,6 @@ class _ChannelMessagePathMapScreenState
             ? points.first
             : const LatLng(0, 0);
         final initialZoom = points.isNotEmpty ? 13.0 : 2.0;
-        if (!_didReceivePositionUpdate) {
-          _showNodeLabels = initialZoom >= _labelZoomThreshold;
-        }
         final bounds = points.length > 1
             ? LatLngBounds.fromPoints(points)
             : null;
@@ -414,9 +366,7 @@ class _ChannelMessagePathMapScreenState
         _pathDistance = _getPathDistance(points);
 
         return Scaffold(
-          appBar: AppBar(
-            title: AdaptiveAppBarTitle(context.l10n.channelPath_mapTitle),
-          ),
+          appBar: AppBar(title: Text(context.l10n.channelPath_mapTitle)),
           body: SafeArea(
             top: false,
             child: Stack(
@@ -438,17 +388,6 @@ class _ChannelMessagePathMapScreenState
                     interactionOptions: InteractionOptions(
                       flags: ~InteractiveFlag.rotate,
                     ),
-                    onPositionChanged: (camera, hasGesture) {
-                      final shouldShow = camera.zoom >= _labelZoomThreshold;
-                      if (!_didReceivePositionUpdate ||
-                          shouldShow != _showNodeLabels) {
-                        if (!mounted) return;
-                        setState(() {
-                          _didReceivePositionUpdate = true;
-                          _showNodeLabels = shouldShow;
-                        });
-                      }
-                    },
                   ),
                   children: [
                     TileLayer(
@@ -460,12 +399,7 @@ class _ChannelMessagePathMapScreenState
                     ),
                     if (polylines.isNotEmpty)
                       PolylineLayer(polylines: polylines),
-                    MarkerLayer(
-                      markers: _buildHopMarkers(
-                        hops,
-                        showLabels: _showNodeLabels,
-                      ),
-                    ),
+                    MarkerLayer(markers: _buildHopMarkers(hops)),
                   ],
                 ),
                 if (observedPaths.length > 1)
@@ -488,7 +422,7 @@ class _ChannelMessagePathMapScreenState
                       ),
                     ),
                   ),
-                _buildLegendCard(context, hops, isImperial),
+                _buildLegendCard(context, hops),
               ],
             ),
           ),
@@ -560,61 +494,45 @@ class _ChannelMessagePathMapScreenState
     );
   }
 
-  List<Marker> _buildHopMarkers(
-    List<_PathHop> hops, {
-    required bool showLabels,
-  }) {
-    final markers = <Marker>[];
-    for (final hop in hops) {
-      if (!hop.hasLocation) continue;
-      final point = hop.position!;
-      markers.add(
-        Marker(
-          point: point,
-          width: 35,
-          height: 35,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.green,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+  List<Marker> _buildHopMarkers(List<_PathHop> hops) {
+    return [
+      for (final hop in hops)
+        if (hop.hasLocation)
+          Marker(
+            point: hop.position!,
+            width: 35,
+            height: 35,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                hop.index.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
                 ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              hop.index.toString(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
               ),
             ),
           ),
-        ),
-      );
-      if (showLabels) {
-        markers.add(
-          _buildNodeLabelMarker(
-            point: point,
-            label: hop.contact?.name ?? _formatPrefix(hop.prefix),
-          ),
-        );
-      }
-    }
-
-    final selfLat = context.read<MeshCoreConnector>().selfLatitude;
-    final selfLon = context.read<MeshCoreConnector>().selfLongitude;
-    if (selfLat != null && selfLon != null) {
-      final selfPoint = LatLng(selfLat, selfLon);
-      markers.add(
+      if (context.read<MeshCoreConnector>().selfLatitude != null &&
+          context.read<MeshCoreConnector>().selfLongitude != null)
         Marker(
-          point: selfPoint,
+          point: LatLng(
+            context.read<MeshCoreConnector>().selfLatitude!,
+            context.read<MeshCoreConnector>().selfLongitude!,
+          ),
           width: 35,
           height: 35,
           child: Container(
@@ -641,60 +559,10 @@ class _ChannelMessagePathMapScreenState
             ),
           ),
         ),
-      );
-      if (showLabels) {
-        markers.add(
-          _buildNodeLabelMarker(
-            point: selfPoint,
-            label: context.l10n.pathTrace_you,
-          ),
-        );
-      }
-    }
-
-    return markers;
+    ];
   }
 
-  Marker _buildNodeLabelMarker({required LatLng point, required String label}) {
-    return Marker(
-      point: point,
-      width: 120,
-      height: 24,
-      alignment: Alignment.topCenter,
-      child: IgnorePointer(
-        child: Transform.translate(
-          offset: const Offset(0, -20),
-          child: FittedBox(
-            fit: BoxFit.contain,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLegendCard(
-    BuildContext context,
-    List<_PathHop> hops,
-    bool isImperial,
-  ) {
+  Widget _buildLegendCard(BuildContext context, List<_PathHop> hops) {
     final l10n = context.l10n;
     final maxHeight = MediaQuery.of(context).size.height * 0.35;
     final estimatedHeight = 72.0 + (hops.length * 56.0);
@@ -713,7 +581,7 @@ class _ChannelMessagePathMapScreenState
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: Text(
-                  '${l10n.channelPath_repeaterHops} ${formatDistance(_pathDistance, isImperial: isImperial)}',
+                  '${l10n.channelPath_repeaterHops} (${(_pathDistance / 1609.34).toStringAsFixed(2)} Miles / ${(_pathDistance / 1000).toStringAsFixed(2)} Km)',
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -726,7 +594,7 @@ class _ChannelMessagePathMapScreenState
                     : ListView.separated(
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         itemCount: hops.length,
-                        separatorBuilder: (_, _) => const Divider(height: 1),
+                        separatorBuilder: (_, __) => const Divider(height: 1),
                         itemBuilder: (context, index) {
                           final hop = hops[index];
                           return ListTile(

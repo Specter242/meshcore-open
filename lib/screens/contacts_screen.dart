@@ -3,8 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:meshcore_open/screens/path_trace_map.dart';
-import 'package:meshcore_open/utils/app_logger.dart';
-import 'package:meshcore_open/widgets/app_bar.dart';
 import 'package:provider/provider.dart';
 
 import '../connector/meshcore_connector.dart';
@@ -18,14 +16,18 @@ import '../utils/dialog_utils.dart';
 import '../utils/disconnect_navigation_mixin.dart';
 import '../utils/emoji_utils.dart';
 import '../utils/route_transitions.dart';
+import '../widgets/battery_indicator.dart';
 import '../widgets/list_filter_widget.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/quick_switch_bar.dart';
 import '../widgets/repeater_login_dialog.dart';
 import '../widgets/room_login_dialog.dart';
 import '../widgets/unread_badge.dart';
+import '../services/room_sync_service.dart';
+import '../services/app_settings_service.dart';
 import 'channels_screen.dart';
 import 'chat_screen.dart';
+import 'discovered_nodes_screen.dart';
 import 'map_screen.dart';
 import 'repeater_hub_screen.dart';
 import 'settings_screen.dart';
@@ -91,90 +93,79 @@ class _ContactsScreenState extends State<ContactsScreen>
     _frameSubscription = connector.receivedFrames.listen((frame) {
       if (frame.isEmpty) return;
       final frameBuffer = BufferReader(frame);
-      try {
-        final code = frameBuffer.readUInt8();
+      final code = frameBuffer.readUInt8();
 
-        if (code == respCodeExportContact) {
-          final advertPacket = frameBuffer.readRemainingBytes();
-          // Validate packet has expected minimum size (98+ bytes per protocol)
-          if (advertPacket.length < 98) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(context.l10n.contacts_invalidAdvertFormat),
-                ),
-              );
-            }
-            _pendingOperations.remove(ContactOperationType.export);
-            return;
+      if (code == respCodeExportContact) {
+        final advertPacket = frameBuffer.readRemainingBytes();
+        // Validate packet has expected minimum size (98+ bytes per protocol)
+        if (advertPacket.length < 98) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(context.l10n.contacts_invalidAdvertFormat),
+              ),
+            );
           }
-          final hexString = pubKeyToHex(advertPacket);
-          Clipboard.setData(ClipboardData(text: "meshcore://$hexString"));
+          _pendingOperations.remove(ContactOperationType.export);
+          return;
+        }
+        final hexString = pubKeyToHex(advertPacket);
+        Clipboard.setData(ClipboardData(text: "meshcore://$hexString"));
+      }
+
+      if (code == respCodeOk) {
+        // Show a snackbar indicating success
+        if (!mounted) return;
+
+        if (_pendingOperations.contains(ContactOperationType.import)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.contacts_contactImported)),
+          );
         }
 
-        if (code == respCodeOk) {
-          // Show a snackbar indicating success
-          if (!mounted) return;
-
-          if (_pendingOperations.contains(ContactOperationType.import)) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(context.l10n.contacts_contactImported)),
-            );
-          }
-
-          if (_pendingOperations.contains(ContactOperationType.zeroHopShare)) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(context.l10n.contacts_zeroHopContactAdvertSent),
-              ),
-            );
-          }
-
-          if (_pendingOperations.contains(ContactOperationType.export)) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(context.l10n.contacts_contactAdvertCopied),
-              ),
-            );
-          }
-
-          _pendingOperations.clear();
+        if (_pendingOperations.contains(ContactOperationType.zeroHopShare)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.l10n.contacts_zeroHopContactAdvertSent),
+            ),
+          );
         }
 
-        if (code == respCodeErr) {
-          // Show a snackbar indicating failure
-          if (!mounted) return;
-
-          if (_pendingOperations.contains(ContactOperationType.import)) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(context.l10n.contacts_contactImportFailed),
-              ),
-            );
-          }
-
-          if (_pendingOperations.contains(ContactOperationType.zeroHopShare)) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(context.l10n.contacts_zeroHopContactAdvertFailed),
-              ),
-            );
-          }
-          if (_pendingOperations.contains(ContactOperationType.export)) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(context.l10n.contacts_contactAdvertCopyFailed),
-              ),
-            );
-          }
-
-          _pendingOperations.clear();
+        if (_pendingOperations.contains(ContactOperationType.export)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.contacts_contactAdvertCopied)),
+          );
         }
-      } catch (e) {
-        appLogger.error(
-          'Error processing received frame: $e',
-          tag: 'ContactsScreen',
-        );
+
+        _pendingOperations.clear();
+      }
+
+      if (code == respCodeErr) {
+        // Show a snackbar indicating failure
+        if (!mounted) return;
+
+        if (_pendingOperations.contains(ContactOperationType.import)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l10n.contacts_contactImportFailed)),
+          );
+        }
+
+        if (_pendingOperations.contains(ContactOperationType.zeroHopShare)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.l10n.contacts_zeroHopContactAdvertFailed),
+            ),
+          );
+        }
+        if (_pendingOperations.contains(ContactOperationType.export)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.l10n.contacts_contactAdvertCopyFailed),
+            ),
+          );
+        }
+
+        _pendingOperations.clear();
       }
     });
   }
@@ -244,7 +235,13 @@ class _ContactsScreenState extends State<ContactsScreen>
       canPop: allowBack,
       child: Scaffold(
         appBar: AppBar(
-          title: AppBarTitle(context.l10n.contacts_title),
+          leadingWidth: 180,
+          leading: BatteryIndicator(
+            connector: connector,
+            showCompanionName: true,
+          ),
+          title: Text(context.l10n.contacts_title),
+          centerTitle: true,
           automaticallyImplyLeading: false,
           actions: [
             PopupMenuButton(
@@ -384,6 +381,7 @@ class _ContactsScreenState extends State<ContactsScreen>
 
   Widget _buildContactsBody(BuildContext context, MeshCoreConnector connector) {
     final contacts = connector.contacts;
+    final appSettings = context.watch<AppSettingsService>().settings;
 
     if (contacts.isEmpty && connector.isLoadingContacts && _groups.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -402,41 +400,6 @@ class _ContactsScreenState extends State<ContactsScreen>
         ? const <ContactGroup>[]
         : _filterAndSortGroups(_groups, contacts);
 
-    String hintText = "";
-
-    switch (_typeFilter) {
-      case ContactTypeFilter.all:
-        hintText = context.l10n.contacts_searchContacts(
-          filteredAndSorted.length,
-          _showUnreadOnly ? " ${context.l10n.contacts_unread}" : "",
-        );
-        break;
-      case ContactTypeFilter.users:
-        hintText = context.l10n.contacts_searchUsers(
-          filteredAndSorted.length,
-          _showUnreadOnly ? " ${context.l10n.contacts_unread}" : "",
-        );
-        break;
-      case ContactTypeFilter.repeaters:
-        hintText = context.l10n.contacts_searchRepeaters(
-          filteredAndSorted.length,
-          _showUnreadOnly ? " ${context.l10n.contacts_unread}" : "",
-        );
-        break;
-      case ContactTypeFilter.rooms:
-        hintText = context.l10n.contacts_searchRoomServers(
-          filteredAndSorted.length,
-          _showUnreadOnly ? " ${context.l10n.contacts_unread}" : "",
-        );
-        break;
-      case ContactTypeFilter.favorites:
-        hintText = context.l10n.contacts_searchFavorites(
-          filteredAndSorted.length,
-          _showUnreadOnly ? " ${context.l10n.contacts_unread}" : "",
-        );
-        break;
-    }
-
     return Column(
       children: [
         Padding(
@@ -444,7 +407,7 @@ class _ContactsScreenState extends State<ContactsScreen>
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: hintText,
+              hintText: context.l10n.contacts_searchContacts,
               prefixIcon: const Icon(Icons.search),
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -517,6 +480,7 @@ class _ContactsScreenState extends State<ContactsScreen>
                         lastSeen: _resolveLastSeen(contact),
                         unreadCount: unreadCount,
                         isFavorite: contact.isFavorite,
+                        compactView: appSettings.contactsCompactView,
                         onTap: () => _openChat(context, contact),
                         onLongPress: () =>
                             _showContactOptions(context, connector, contact),
@@ -553,7 +517,6 @@ class _ContactsScreenState extends State<ContactsScreen>
         })
         .where((group) {
           if (_typeFilter == ContactTypeFilter.all) return true;
-          // Groups don't have a favorite flag, so hide them under favorites filter
           if (_typeFilter == ContactTypeFilter.favorites) return false;
           for (final key in group.memberKeys) {
             final contact = contactsByKey[key];
@@ -723,6 +686,12 @@ class _ContactsScreenState extends State<ContactsScreen>
         );
         break;
       case 2:
+        Navigator.pushReplacement(
+          context,
+          buildQuickSwitchRoute(const DiscoveredNodesScreen(hideBackButton: true)),
+        );
+        break;
+      case 3:
         Navigator.pushReplacement(
           context,
           buildQuickSwitchRoute(const MapScreen(hideBackButton: true)),
@@ -1022,6 +991,7 @@ class _ContactsScreenState extends State<ContactsScreen>
     final isRepeater = contact.type == advTypeRepeater;
     final isRoom = contact.type == advTypeRoom;
     final isFavorite = contact.isFavorite;
+    final roomSyncService = context.read<RoomSyncService>();
 
     showModalBottomSheet(
       context: context,
@@ -1085,6 +1055,20 @@ class _ContactsScreenState extends State<ContactsScreen>
                   _showRoomLogin(context, contact, RoomLoginDestination.chat);
                 },
               ),
+              SwitchListTile(
+                secondary: const Icon(Icons.sync),
+                title: Text(context.l10n.contacts_roomAutoSyncTitle),
+                subtitle: Text(context.l10n.contacts_roomAutoSyncSubtitle),
+                value: roomSyncService.isRoomAutoSyncEnabled(
+                  contact.publicKeyHex,
+                ),
+                onChanged: (enabled) async {
+                  await roomSyncService.setRoomAutoSyncEnabled(
+                    contact.publicKeyHex,
+                    enabled,
+                  );
+                },
+              ),
               ListTile(
                 leading: const Icon(
                   Icons.room_preferences,
@@ -1135,8 +1119,8 @@ class _ContactsScreenState extends State<ContactsScreen>
               ),
               title: Text(
                 isFavorite
-                    ? context.l10n.listFilter_removeFromFavorites
-                    : context.l10n.listFilter_addToFavorites,
+                    ? '${context.l10n.common_remove} ${context.l10n.listFilter_favorites}'
+                    : '${context.l10n.common_add} ${context.l10n.listFilter_favorites}',
               ),
               onTap: () async {
                 Navigator.pop(sheetContext);
@@ -1212,6 +1196,7 @@ class _ContactTile extends StatelessWidget {
   final DateTime lastSeen;
   final int unreadCount;
   final bool isFavorite;
+  final bool compactView;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
@@ -1220,30 +1205,58 @@ class _ContactTile extends StatelessWidget {
     required this.lastSeen,
     required this.unreadCount,
     required this.isFavorite,
+    required this.compactView,
     required this.onTap,
     required this.onLongPress,
   });
 
   @override
   Widget build(BuildContext context) {
+    final roomSync = context.watch<RoomSyncService>();
+    final roomStatus = contact.type == advTypeRoom
+        ? roomSync.roomStatus(contact.publicKeyHex)
+        : null;
+    final roomStatusLabel = roomStatus == null
+        ? null
+        : _roomStatusLabel(context, roomStatus);
+    final roomStatusColor = (() {
+      if (roomStatus == null) return Colors.grey[600];
+      switch (roomStatus) {
+        case RoomSyncStatus.syncing:
+          return Colors.blue[700];
+        case RoomSyncStatus.connectedSynced:
+          return Colors.green[700];
+        case RoomSyncStatus.disabled:
+        case RoomSyncStatus.notLoggedIn:
+          return Colors.grey[700];
+        default:
+          return Colors.orange[700];
+      }
+    })();
+
+    final subtitleLines = <Widget>[
+      if (!compactView) Text(contact.pathLabel),
+      if (roomStatusLabel != null)
+        Text(
+          roomStatusLabel,
+          style: TextStyle(fontSize: 12, color: roomStatusColor),
+        ),
+      if (!compactView)
+        Text(contact.shortPubKeyHex, style: TextStyle(fontSize: 12)),
+    ];
+
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: _getTypeColor(contact.type),
         child: _buildContactAvatar(contact),
       ),
-      title: Text(contact.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(contact.pathLabel, maxLines: 1, overflow: TextOverflow.ellipsis),
-          Text(
-            contact.shortPubKeyHex,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12),
-          ),
-        ],
-      ),
+      title: Text(contact.name),
+      subtitle: subtitleLines.isEmpty
+          ? null
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: subtitleLines,
+            ),
       // Clamp text scaling in trailing section to prevent overflow while
       // maintaining accessibility. Primary content (title/subtitle) scales normally.
       trailing: MediaQuery(
@@ -1252,36 +1265,29 @@ class _ContactTile extends StatelessWidget {
             MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.3),
           ),
         ),
-        child: SizedBox(
-          width: 120,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (unreadCount > 0) ...[
-                UnreadBadge(count: unreadCount),
-                const SizedBox(height: 4),
-              ],
-              Text(
-                _formatLastSeen(context, lastSeen),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.right,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isFavorite)
-                    Icon(Icons.star, size: 14, color: Colors.amber[700]),
-                  if (isFavorite && contact.hasLocation)
-                    const SizedBox(width: 2),
-                  if (contact.hasLocation)
-                    Icon(Icons.location_on, size: 14, color: Colors.grey[400]),
-                ],
-              ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (unreadCount > 0) ...[
+              UnreadBadge(count: unreadCount),
+              const SizedBox(height: 4),
             ],
-          ),
+            Text(
+              _formatLastSeen(context, lastSeen),
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isFavorite)
+                  Icon(Icons.star, size: 14, color: Colors.amber[700]),
+                if (isFavorite && contact.hasLocation) const SizedBox(width: 2),
+                if (contact.hasLocation)
+                  Icon(Icons.location_on, size: 14, color: Colors.grey[400]),
+              ],
+            ),
+          ],
         ),
       ),
       onTap: onTap,
@@ -1347,5 +1353,26 @@ class _ContactTile extends StatelessWidget {
     return days == 1
         ? context.l10n.contacts_lastSeenDayAgo
         : context.l10n.contacts_lastSeenDaysAgo(days);
+  }
+
+  String _roomStatusLabel(BuildContext context, RoomSyncStatus status) {
+    switch (status) {
+      case RoomSyncStatus.off:
+        return context.l10n.roomSync_statusOff;
+      case RoomSyncStatus.disabled:
+        return context.l10n.roomSync_statusDisabled;
+      case RoomSyncStatus.syncing:
+        return context.l10n.roomSync_statusSyncing;
+      case RoomSyncStatus.connectedWaiting:
+        return context.l10n.roomSync_statusConnectedWaiting;
+      case RoomSyncStatus.connectedStale:
+        return context.l10n.roomSync_statusConnectedStale;
+      case RoomSyncStatus.connectedSynced:
+        return context.l10n.roomSync_statusConnectedSynced;
+      case RoomSyncStatus.notLoggedIn:
+        return context.l10n.roomSync_statusNotLoggedIn;
+      case RoomSyncStatus.notSynced:
+        return context.l10n.roomSync_statusNotSynced;
+    }
   }
 }

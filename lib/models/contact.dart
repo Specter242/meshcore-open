@@ -2,6 +2,8 @@ import 'dart:typed_data';
 import '../connector/meshcore_protocol.dart';
 
 class Contact {
+  static const int favoriteFlagMask = 0x01;
+
   final Uint8List publicKey;
   final String name;
   final int type;
@@ -14,6 +16,7 @@ class Contact {
   final double? latitude;
   final double? longitude;
   final DateTime lastSeen;
+  final DateTime lastModified;
   final DateTime lastMessageAt;
 
   Contact({
@@ -28,8 +31,10 @@ class Contact {
     this.latitude,
     this.longitude,
     required this.lastSeen,
+    DateTime? lastModified,
     DateTime? lastMessageAt,
-  }) : lastMessageAt = lastMessageAt ?? lastSeen;
+  }) : lastModified = lastModified ?? lastSeen,
+       lastMessageAt = lastMessageAt ?? lastSeen;
 
   String get publicKeyHex => pubKeyToHex(publicKey);
 
@@ -124,7 +129,7 @@ class Contact {
     final pathBytes = _pathBytesForDisplay;
     Uint8List? traceBytes;
 
-    if (pathBytes.isEmpty) {
+    if (pathLength <= 0) {
       traceBytes = Uint8List(1);
       traceBytes[0] = publicKey[0];
       return traceBytes;
@@ -165,49 +170,48 @@ class Contact {
   }
 
   static Contact? fromFrame(Uint8List data) {
-    if (data.isEmpty) return null;
+    if (data.length < contactFrameSize) return null;
     if (data[0] != respCodeContact) return null;
-    try {
-      final pubKey = Uint8List.fromList(
-        data.sublist(contactPubKeyOffset, contactPubKeyOffset + pubKeySize),
-      );
-      final type = data[contactTypeOffset];
-      final flags = data[contactFlagsOffset];
-      final pathLen = data[contactPathLenOffset].toSigned(8);
-      final safePathLen = pathLen > 0
-          ? (pathLen > maxPathSize ? maxPathSize : pathLen)
-          : 0;
-      final pathBytes = safePathLen > 0
-          ? Uint8List.fromList(
-              data.sublist(contactPathOffset, contactPathOffset + safePathLen),
-            )
-          : Uint8List(0);
-      final name = readCString(data, contactNameOffset, maxNameSize);
-      final lastmod = readUint32LE(data, contactLastmodOffset);
 
-      double? lat, lon;
-      final latRaw = readInt32LE(data, contactLatOffset);
-      final lonRaw = readInt32LE(data, contactLonOffset);
-      if (latRaw != 0 || lonRaw != 0) {
-        lat = latRaw / 1e6;
-        lon = lonRaw / 1e6;
-      }
+    final pubKey = Uint8List.fromList(
+      data.sublist(contactPubKeyOffset, contactPubKeyOffset + pubKeySize),
+    );
+    final type = data[contactTypeOffset];
+    final flags = data[contactFlagsOffset];
+    final pathLen = data[contactPathLenOffset].toSigned(8);
+    final safePathLen = pathLen > 0
+        ? (pathLen > maxPathSize ? maxPathSize : pathLen)
+        : 0;
+    final pathBytes = safePathLen > 0
+        ? Uint8List.fromList(
+            data.sublist(contactPathOffset, contactPathOffset + safePathLen),
+          )
+        : Uint8List(0);
+    final name = readCString(data, contactNameOffset, maxNameSize);
+    final timestamp = readUint32LE(data, contactTimestampOffset);
+    final lastmod = readUint32LE(data, contactLastmodOffset);
+    final lastSeenSeconds = timestamp > 0 ? timestamp : lastmod;
 
-      return Contact(
-        publicKey: pubKey,
-        name: name.isEmpty ? 'Unknown' : name,
-        type: type,
-        flags: flags,
-        pathLength: pathLen,
-        path: pathBytes,
-        latitude: lat,
-        longitude: lon,
-        lastSeen: DateTime.fromMillisecondsSinceEpoch(lastmod * 1000),
-      );
-    } catch (e) {
-      // If parsing fails, return null
-      return null;
+    double? lat, lon;
+    final latRaw = readInt32LE(data, contactLatOffset);
+    final lonRaw = readInt32LE(data, contactLonOffset);
+    if (latRaw != 0 || lonRaw != 0) {
+      lat = latRaw / 1e6;
+      lon = lonRaw / 1e6;
     }
+
+    return Contact(
+      publicKey: pubKey,
+      name: name.isEmpty ? 'Unknown' : name,
+      type: type,
+      flags: flags,
+      pathLength: pathLen,
+      path: pathBytes,
+      latitude: lat,
+      longitude: lon,
+      lastSeen: DateTime.fromMillisecondsSinceEpoch(lastSeenSeconds * 1000),
+      lastModified: DateTime.fromMillisecondsSinceEpoch(lastmod * 1000),
+    );
   }
 
   @override

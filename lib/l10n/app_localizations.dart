@@ -364,6 +364,30 @@ abstract class AppLocalizations {
   /// **'Connection failed: {error}'**
   String scanner_connectionFailed(String error);
 
+  /// No description provided for @scanner_reconnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnecting to {deviceName}...'**
+  String scanner_reconnecting(String deviceName);
+
+  /// No description provided for @scanner_waitingForDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for {deviceName}...'**
+  String scanner_waitingForDevice(String deviceName);
+
+  /// No description provided for @scanner_lostConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Lost connection to {deviceName}'**
+  String scanner_lostConnection(String deviceName);
+
+  /// No description provided for @scanner_reconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect'**
+  String get scanner_reconnect;
+
   /// No description provided for @scanner_stop.
   ///
   /// In en, this message translates to:
@@ -375,24 +399,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Scan'**
   String get scanner_scan;
-
-  /// No description provided for @scanner_bluetoothOff.
-  ///
-  /// In en, this message translates to:
-  /// **'Bluetooth is off'**
-  String get scanner_bluetoothOff;
-
-  /// No description provided for @scanner_bluetoothOffMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Please turn on Bluetooth to scan for devices'**
-  String get scanner_bluetoothOffMessage;
-
-  /// No description provided for @scanner_enableBluetooth.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable Bluetooth'**
-  String get scanner_enableBluetooth;
 
   /// No description provided for @device_quickSwitch.
   ///
@@ -700,12 +706,6 @@ abstract class AppLocalizations {
   /// **'An open-source Flutter client for MeshCore LoRa mesh networking devices.'**
   String get settings_aboutDescription;
 
-  /// No description provided for @settings_aboutOpenMeteoAttribution.
-  ///
-  /// In en, this message translates to:
-  /// **'LOS elevation data: Open-Meteo (CC BY 4.0)'**
-  String get settings_aboutOpenMeteoAttribution;
-
   /// No description provided for @settings_infoName.
   ///
   /// In en, this message translates to:
@@ -753,6 +753,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Presets'**
   String get settings_presets;
+
+  /// No description provided for @settings_preset915Mhz.
+  ///
+  /// In en, this message translates to:
+  /// **'915 MHz'**
+  String get settings_preset915Mhz;
+
+  /// No description provided for @settings_preset868Mhz.
+  ///
+  /// In en, this message translates to:
+  /// **'868 MHz'**
+  String get settings_preset868Mhz;
+
+  /// No description provided for @settings_preset433Mhz.
+  ///
+  /// In en, this message translates to:
+  /// **'433 MHz'**
+  String get settings_preset433Mhz;
 
   /// No description provided for @settings_frequency.
   ///
@@ -808,23 +826,17 @@ abstract class AppLocalizations {
   /// **'Invalid TX power (0-22 dBm)'**
   String get settings_txPowerInvalid;
 
-  /// No description provided for @settings_clientRepeat.
+  /// No description provided for @settings_longRange.
   ///
   /// In en, this message translates to:
-  /// **'Off-Grid Repeat'**
-  String get settings_clientRepeat;
+  /// **'Long Range'**
+  String get settings_longRange;
 
-  /// No description provided for @settings_clientRepeatSubtitle.
+  /// No description provided for @settings_fastSpeed.
   ///
   /// In en, this message translates to:
-  /// **'Allow this device to repeat mesh packets for others'**
-  String get settings_clientRepeatSubtitle;
-
-  /// No description provided for @settings_clientRepeatFreqWarning.
-  ///
-  /// In en, this message translates to:
-  /// **'Off-grid repeat requires 433, 869, or 918 MHz frequency'**
-  String get settings_clientRepeatFreqWarning;
+  /// **'Fast Speed'**
+  String get settings_fastSpeed;
 
   /// No description provided for @settings_error.
   ///
@@ -970,18 +982,6 @@ abstract class AppLocalizations {
   /// **'Українська'**
   String get appSettings_languageUk;
 
-  /// No description provided for @appSettings_enableMessageTracing.
-  ///
-  /// In en, this message translates to:
-  /// **'Enable Message Tracing'**
-  String get appSettings_enableMessageTracing;
-
-  /// No description provided for @appSettings_enableMessageTracingSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show detailed routing and timing metadata for messages'**
-  String get appSettings_enableMessageTracingSubtitle;
-
   /// No description provided for @appSettings_notifications.
   ///
   /// In en, this message translates to:
@@ -1053,6 +1053,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show notification when new nodes are discovered'**
   String get appSettings_advertisementNotificationsSubtitle;
+
+  /// No description provided for @appSettings_connection.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection'**
+  String get appSettings_connection;
+
+  /// No description provided for @appSettings_autoReconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically reconnect'**
+  String get appSettings_autoReconnect;
+
+  /// No description provided for @appSettings_autoReconnectSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep trying to reach your companion when Bluetooth connection is lost, including after extended time out of range.'**
+  String get appSettings_autoReconnectSubtitle;
+
+  /// No description provided for @appSettings_autoReconnectEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-reconnect enabled'**
+  String get appSettings_autoReconnectEnabled;
+
+  /// No description provided for @appSettings_autoReconnectDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-reconnect disabled'**
+  String get appSettings_autoReconnectDisabled;
 
   /// No description provided for @appSettings_messaging.
   ///
@@ -1258,24 +1288,6 @@ abstract class AppLocalizations {
   /// **'Offline Map Cache'**
   String get appSettings_offlineMapCache;
 
-  /// No description provided for @appSettings_unitsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Units'**
-  String get appSettings_unitsTitle;
-
-  /// No description provided for @appSettings_unitsMetric.
-  ///
-  /// In en, this message translates to:
-  /// **'Metric (m / km)'**
-  String get appSettings_unitsMetric;
-
-  /// No description provided for @appSettings_unitsImperial.
-  ///
-  /// In en, this message translates to:
-  /// **'Imperial (ft / mi)'**
-  String get appSettings_unitsImperial;
-
   /// No description provided for @appSettings_noAreaSelected.
   ///
   /// In en, this message translates to:
@@ -1318,6 +1330,84 @@ abstract class AppLocalizations {
   /// **'App debug logging disabled'**
   String get appSettings_appDebugLoggingDisabled;
 
+  /// No description provided for @appSettings_roomSyncTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Room Sync'**
+  String get appSettings_roomSyncTitle;
+
+  /// No description provided for @appSettings_roomSyncEnableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable room auto-sync'**
+  String get appSettings_roomSyncEnableTitle;
+
+  /// No description provided for @appSettings_roomSyncEnableSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatically keep room-server backlog synced while connected.'**
+  String get appSettings_roomSyncEnableSubtitle;
+
+  /// No description provided for @appSettings_roomSyncAutoLoginTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-login saved room sessions'**
+  String get appSettings_roomSyncAutoLoginTitle;
+
+  /// No description provided for @appSettings_roomSyncAutoLoginSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'On reconnect, login to room servers with saved passwords.'**
+  String get appSettings_roomSyncAutoLoginSubtitle;
+
+  /// No description provided for @appSettings_roomSyncBaseIntervalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Base sync interval'**
+  String get appSettings_roomSyncBaseIntervalTitle;
+
+  /// No description provided for @appSettings_roomSyncBaseIntervalDialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Base sync interval (seconds)'**
+  String get appSettings_roomSyncBaseIntervalDialog;
+
+  /// No description provided for @appSettings_roomSyncMaxBackoffTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Max backoff interval'**
+  String get appSettings_roomSyncMaxBackoffTitle;
+
+  /// No description provided for @appSettings_roomSyncMaxBackoffDialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Max backoff interval (seconds)'**
+  String get appSettings_roomSyncMaxBackoffDialog;
+
+  /// No description provided for @appSettings_roomSyncTimeoutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync timeout'**
+  String get appSettings_roomSyncTimeoutTitle;
+
+  /// No description provided for @appSettings_roomSyncTimeoutDialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync timeout (seconds)'**
+  String get appSettings_roomSyncTimeoutDialog;
+
+  /// No description provided for @appSettings_roomSyncStaleAfterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark room stale after'**
+  String get appSettings_roomSyncStaleAfterTitle;
+
+  /// No description provided for @appSettings_roomSyncStaleAfterDialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Stale threshold (minutes)'**
+  String get appSettings_roomSyncStaleAfterDialog;
+
   /// No description provided for @contacts_title.
   ///
   /// In en, this message translates to:
@@ -1336,47 +1426,11 @@ abstract class AppLocalizations {
   /// **'Contacts will appear when devices advertise'**
   String get contacts_contactsWillAppear;
 
-  /// No description provided for @contacts_unread.
-  ///
-  /// In en, this message translates to:
-  /// **'Unread'**
-  String get contacts_unread;
-
-  /// No description provided for @contacts_searchContactsNoNumber.
-  ///
-  /// In en, this message translates to:
-  /// **'Search Contacts...'**
-  String get contacts_searchContactsNoNumber;
-
   /// No description provided for @contacts_searchContacts.
   ///
   /// In en, this message translates to:
-  /// **'Search {number}{str} Contacts...'**
-  String contacts_searchContacts(int number, String str);
-
-  /// No description provided for @contacts_searchFavorites.
-  ///
-  /// In en, this message translates to:
-  /// **'Search {number}{str} Favorites...'**
-  String contacts_searchFavorites(int number, String str);
-
-  /// No description provided for @contacts_searchUsers.
-  ///
-  /// In en, this message translates to:
-  /// **'Search {number}{str} Users...'**
-  String contacts_searchUsers(int number, String str);
-
-  /// No description provided for @contacts_searchRepeaters.
-  ///
-  /// In en, this message translates to:
-  /// **'Search {number}{str} Repeaters...'**
-  String contacts_searchRepeaters(int number, String str);
-
-  /// No description provided for @contacts_searchRoomServers.
-  ///
-  /// In en, this message translates to:
-  /// **'Search {number}{str} Room servers...'**
-  String contacts_searchRoomServers(int number, String str);
+  /// **'Search contacts...'**
+  String get contacts_searchContacts;
 
   /// No description provided for @contacts_noUnreadContacts.
   ///
@@ -1419,6 +1473,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Room Server Login'**
   String get contacts_roomLogin;
+
+  /// No description provided for @contacts_roomAutoSyncTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-sync this room'**
+  String get contacts_roomAutoSyncTitle;
+
+  /// No description provided for @contacts_roomAutoSyncSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable automatic login and background catch-up sync for this room.'**
+  String get contacts_roomAutoSyncSubtitle;
 
   /// No description provided for @contacts_openChat.
   ///
@@ -1594,18 +1660,6 @@ abstract class AppLocalizations {
   /// **'Edit channel'**
   String get channels_editChannel;
 
-  /// No description provided for @channels_muteChannel.
-  ///
-  /// In en, this message translates to:
-  /// **'Mute channel'**
-  String get channels_muteChannel;
-
-  /// No description provided for @channels_unmuteChannel.
-  ///
-  /// In en, this message translates to:
-  /// **'Unmute channel'**
-  String get channels_unmuteChannel;
-
   /// No description provided for @channels_deleteChannel.
   ///
   /// In en, this message translates to:
@@ -1617,12 +1671,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delete \"{name}\"? This cannot be undone.'**
   String channels_deleteChannelConfirm(String name);
-
-  /// No description provided for @channels_channelDeleteFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to delete channel \"{name}\"'**
-  String channels_channelDeleteFailed(String name);
 
   /// No description provided for @channels_channelDeleted.
   ///
@@ -2122,12 +2170,6 @@ abstract class AppLocalizations {
   /// **'Path Management'**
   String get chat_pathManagement;
 
-  /// No description provided for @chat_ShowAllPaths.
-  ///
-  /// In en, this message translates to:
-  /// **'Show all paths'**
-  String get chat_ShowAllPaths;
-
   /// No description provided for @chat_routingMode.
   ///
   /// In en, this message translates to:
@@ -2380,18 +2422,6 @@ abstract class AppLocalizations {
   /// **'Node Map'**
   String get map_title;
 
-  /// No description provided for @map_lineOfSight.
-  ///
-  /// In en, this message translates to:
-  /// **'Line of Sight'**
-  String get map_lineOfSight;
-
-  /// No description provided for @map_losScreenTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Line of Sight'**
-  String get map_losScreenTitle;
-
   /// No description provided for @map_noNodesWithLocation.
   ///
   /// In en, this message translates to:
@@ -2631,30 +2661,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Manage Repeater'**
   String get map_manageRepeater;
-
-  /// No description provided for @map_tapToAdd.
-  ///
-  /// In en, this message translates to:
-  /// **'Tap on nodes to add them to the path.'**
-  String get map_tapToAdd;
-
-  /// No description provided for @map_runTrace.
-  ///
-  /// In en, this message translates to:
-  /// **'Run Path Trace'**
-  String get map_runTrace;
-
-  /// No description provided for @map_removeLast.
-  ///
-  /// In en, this message translates to:
-  /// **'Remove Last'**
-  String get map_removeLast;
-
-  /// No description provided for @map_pathTraceCancelled.
-  ///
-  /// In en, this message translates to:
-  /// **'Path trace cancelled.'**
-  String get map_pathTraceCancelled;
 
   /// No description provided for @mapCache_title.
   ///
@@ -3135,17 +3141,17 @@ abstract class AppLocalizations {
   /// **'Send commands to the repeater'**
   String get repeater_cliSubtitle;
 
-  /// No description provided for @repeater_neighbors.
+  /// No description provided for @repeater_neighbours.
   ///
   /// In en, this message translates to:
   /// **'Neighbors'**
-  String get repeater_neighbors;
+  String get repeater_neighbours;
 
-  /// No description provided for @repeater_neighborsSubtitle.
+  /// No description provided for @repeater_neighboursSubtitle.
   ///
   /// In en, this message translates to:
   /// **'View zero hop neighbors.'**
-  String get repeater_neighborsSubtitle;
+  String get repeater_neighboursSubtitle;
 
   /// No description provided for @repeater_settings.
   ///
@@ -3416,6 +3422,66 @@ abstract class AppLocalizations {
   /// **'1-30 dBm'**
   String get repeater_txPowerHelper;
 
+  /// No description provided for @repeater_advancedSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced Settings'**
+  String get repeater_advancedSettings;
+
+  /// No description provided for @repeater_interferenceThreshold.
+  ///
+  /// In en, this message translates to:
+  /// **'Interference Threshold'**
+  String get repeater_interferenceThreshold;
+
+  /// No description provided for @repeater_interferenceThresholdHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'dB threshold (default 14). Set 0 to disable channel interference detection.'**
+  String get repeater_interferenceThresholdHelper;
+
+  /// No description provided for @repeater_agcResetInterval.
+  ///
+  /// In en, this message translates to:
+  /// **'AGC Reset Interval'**
+  String get repeater_agcResetInterval;
+
+  /// No description provided for @repeater_agcResetIntervalHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Seconds between AGC resets. Set 0 to disable.'**
+  String get repeater_agcResetIntervalHelper;
+
+  /// No description provided for @repeater_floodMaxHops.
+  ///
+  /// In en, this message translates to:
+  /// **'Flood Max Hops'**
+  String get repeater_floodMaxHops;
+
+  /// No description provided for @repeater_floodMaxHopsHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum hops for forwarding inbound flood packets.'**
+  String get repeater_floodMaxHopsHelper;
+
+  /// No description provided for @repeater_multiAcks.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi ACKs'**
+  String get repeater_multiAcks;
+
+  /// No description provided for @repeater_multiAcksHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable double ACK behavior (0 or 1 in firmware).'**
+  String get repeater_multiAcksHelper;
+
+  /// No description provided for @repeater_hopsShort.
+  ///
+  /// In en, this message translates to:
+  /// **'hops'**
+  String get repeater_hopsShort;
+
   /// No description provided for @repeater_bandwidth.
   ///
   /// In en, this message translates to:
@@ -3649,6 +3715,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Refresh Radio Settings'**
   String get repeater_refreshRadioSettings;
+
+  /// No description provided for @repeater_refreshAdvancedSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh Advanced Settings'**
+  String get repeater_refreshAdvancedSettings;
+
+  /// No description provided for @repeater_refreshInterferenceThreshold.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh interference threshold'**
+  String get repeater_refreshInterferenceThreshold;
+
+  /// No description provided for @repeater_refreshAgcResetInterval.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh AGC reset interval'**
+  String get repeater_refreshAgcResetInterval;
+
+  /// No description provided for @repeater_refreshFloodMaxHops.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh flood max hops'**
+  String get repeater_refreshFloodMaxHops;
+
+  /// No description provided for @repeater_refreshMultiAcks.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh multi ACKs'**
+  String get repeater_refreshMultiAcks;
 
   /// No description provided for @repeater_refreshTxPower.
   ///
@@ -4289,13 +4385,13 @@ abstract class AppLocalizations {
   /// No description provided for @neighbors_receivedData.
   ///
   /// In en, this message translates to:
-  /// **'Received Neighbors Data'**
+  /// **'Received Neighbours Data'**
   String get neighbors_receivedData;
 
   /// No description provided for @neighbors_requestTimedOut.
   ///
   /// In en, this message translates to:
-  /// **'Neighbors request timed out.'**
+  /// **'Neighbours request timed out.'**
   String get neighbors_requestTimedOut;
 
   /// No description provided for @neighbors_errorLoading.
@@ -4304,16 +4400,16 @@ abstract class AppLocalizations {
   /// **'Error loading neighbors: {error}'**
   String neighbors_errorLoading(String error);
 
-  /// No description provided for @neighbors_repeatersNeighbors.
+  /// No description provided for @neighbors_repeatersNeighbours.
   ///
   /// In en, this message translates to:
-  /// **'Repeaters Neighbors'**
-  String get neighbors_repeatersNeighbors;
+  /// **'Repeaters Neighbours'**
+  String get neighbors_repeatersNeighbours;
 
   /// No description provided for @neighbors_noData.
   ///
   /// In en, this message translates to:
-  /// **'No neighbors data available.'**
+  /// **'No neighbours data available.'**
   String get neighbors_noData;
 
   /// No description provided for @neighbors_unknownContact.
@@ -4814,18 +4910,6 @@ abstract class AppLocalizations {
   /// **'Favorites'**
   String get listFilter_favorites;
 
-  /// No description provided for @listFilter_addToFavorites.
-  ///
-  /// In en, this message translates to:
-  /// **'Add to favorites'**
-  String get listFilter_addToFavorites;
-
-  /// No description provided for @listFilter_removeFromFavorites.
-  ///
-  /// In en, this message translates to:
-  /// **'Remove from favorites'**
-  String get listFilter_removeFromFavorites;
-
   /// No description provided for @listFilter_users.
   ///
   /// In en, this message translates to:
@@ -4885,231 +4969,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'One or more of the hops is missing a location!'**
   String get pathTrace_someHopsNoLocation;
-
-  /// No description provided for @pathTrace_clearTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear path.'**
-  String get pathTrace_clearTooltip;
-
-  /// No description provided for @losSelectStartEnd.
-  ///
-  /// In en, this message translates to:
-  /// **'Select start and end nodes for LOS.'**
-  String get losSelectStartEnd;
-
-  /// No description provided for @losRunFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Line-of-sight check failed: {error}'**
-  String losRunFailed(String error);
-
-  /// No description provided for @losClearAllPoints.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear all points'**
-  String get losClearAllPoints;
-
-  /// No description provided for @losRunToViewElevationProfile.
-  ///
-  /// In en, this message translates to:
-  /// **'Run LOS to view elevation profile'**
-  String get losRunToViewElevationProfile;
-
-  /// No description provided for @losMenuTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'LOS Menu'**
-  String get losMenuTitle;
-
-  /// No description provided for @losMenuSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Tap nodes or long-press map for custom points'**
-  String get losMenuSubtitle;
-
-  /// No description provided for @losShowDisplayNodes.
-  ///
-  /// In en, this message translates to:
-  /// **'Show display nodes'**
-  String get losShowDisplayNodes;
-
-  /// No description provided for @losCustomPoints.
-  ///
-  /// In en, this message translates to:
-  /// **'Custom points'**
-  String get losCustomPoints;
-
-  /// No description provided for @losCustomPointLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Custom {index}'**
-  String losCustomPointLabel(int index);
-
-  /// No description provided for @losPointA.
-  ///
-  /// In en, this message translates to:
-  /// **'Point A'**
-  String get losPointA;
-
-  /// No description provided for @losPointB.
-  ///
-  /// In en, this message translates to:
-  /// **'Point B'**
-  String get losPointB;
-
-  /// No description provided for @losAntennaA.
-  ///
-  /// In en, this message translates to:
-  /// **'Antenna A: {value} {unit}'**
-  String losAntennaA(String value, String unit);
-
-  /// No description provided for @losAntennaB.
-  ///
-  /// In en, this message translates to:
-  /// **'Antenna B: {value} {unit}'**
-  String losAntennaB(String value, String unit);
-
-  /// No description provided for @losRun.
-  ///
-  /// In en, this message translates to:
-  /// **'Run LOS'**
-  String get losRun;
-
-  /// No description provided for @losNoElevationData.
-  ///
-  /// In en, this message translates to:
-  /// **'No elevation data'**
-  String get losNoElevationData;
-
-  /// No description provided for @losProfileClear.
-  ///
-  /// In en, this message translates to:
-  /// **'{distance} {distanceUnit}, clear LOS, min clearance {clearance} {heightUnit}'**
-  String losProfileClear(
-    String distance,
-    String distanceUnit,
-    String clearance,
-    String heightUnit,
-  );
-
-  /// No description provided for @losProfileBlocked.
-  ///
-  /// In en, this message translates to:
-  /// **'{distance} {distanceUnit}, blocked by {obstruction} {heightUnit}'**
-  String losProfileBlocked(
-    String distance,
-    String distanceUnit,
-    String obstruction,
-    String heightUnit,
-  );
-
-  /// No description provided for @losStatusChecking.
-  ///
-  /// In en, this message translates to:
-  /// **'LOS: checking...'**
-  String get losStatusChecking;
-
-  /// No description provided for @losStatusNoData.
-  ///
-  /// In en, this message translates to:
-  /// **'LOS: no data'**
-  String get losStatusNoData;
-
-  /// No description provided for @losStatusSummary.
-  ///
-  /// In en, this message translates to:
-  /// **'LOS: {clear}/{total} clear, {blocked} blocked, {unknown} unknown'**
-  String losStatusSummary(int clear, int total, int blocked, int unknown);
-
-  /// No description provided for @losErrorElevationUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Elevation data unavailable for one or more samples.'**
-  String get losErrorElevationUnavailable;
-
-  /// No description provided for @losErrorInvalidInput.
-  ///
-  /// In en, this message translates to:
-  /// **'Invalid points/elevation data for LOS calculation.'**
-  String get losErrorInvalidInput;
-
-  /// No description provided for @losRenameCustomPoint.
-  ///
-  /// In en, this message translates to:
-  /// **'Rename custom point'**
-  String get losRenameCustomPoint;
-
-  /// No description provided for @losPointName.
-  ///
-  /// In en, this message translates to:
-  /// **'Point name'**
-  String get losPointName;
-
-  /// No description provided for @losShowPanelTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Show LOS panel'**
-  String get losShowPanelTooltip;
-
-  /// No description provided for @losHidePanelTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Hide LOS panel'**
-  String get losHidePanelTooltip;
-
-  /// No description provided for @losElevationAttribution.
-  ///
-  /// In en, this message translates to:
-  /// **'Elevation data: Open-Meteo (CC BY 4.0)'**
-  String get losElevationAttribution;
-
-  /// No description provided for @losLegendRadioHorizon.
-  ///
-  /// In en, this message translates to:
-  /// **'Radio horizon'**
-  String get losLegendRadioHorizon;
-
-  /// No description provided for @losLegendLosBeam.
-  ///
-  /// In en, this message translates to:
-  /// **'LOS beam'**
-  String get losLegendLosBeam;
-
-  /// No description provided for @losLegendTerrain.
-  ///
-  /// In en, this message translates to:
-  /// **'Terrain'**
-  String get losLegendTerrain;
-
-  /// No description provided for @losFrequencyLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Frequency'**
-  String get losFrequencyLabel;
-
-  /// No description provided for @losFrequencyInfoTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'View calculation details'**
-  String get losFrequencyInfoTooltip;
-
-  /// No description provided for @losFrequencyDialogTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Radio horizon calculation'**
-  String get losFrequencyDialogTitle;
-
-  /// Explain how the calculation uses the baseline frequency and derived k-factor.
-  ///
-  /// In en, this message translates to:
-  /// **'Starting from k={baselineK} at {baselineFreq} MHz, the calculation adjusts the k-factor for the current {frequencyMHz} MHz band, which defines the curved radio horizon cap.'**
-  String losFrequencyDialogDescription(
-    double baselineK,
-    double baselineFreq,
-    double frequencyMHz,
-    double kFactor,
-  );
 
   /// No description provided for @contacts_pathTrace.
   ///
@@ -5243,6 +5102,54 @@ abstract class AppLocalizations {
   /// **'Copying advert to Clipboard failed.'**
   String get contacts_contactAdvertCopyFailed;
 
+  /// No description provided for @roomSync_statusOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Room sync off'**
+  String get roomSync_statusOff;
+
+  /// No description provided for @roomSync_statusDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync disabled'**
+  String get roomSync_statusDisabled;
+
+  /// No description provided for @roomSync_statusSyncing.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing...'**
+  String get roomSync_statusSyncing;
+
+  /// No description provided for @roomSync_statusConnectedWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected, waiting sync'**
+  String get roomSync_statusConnectedWaiting;
+
+  /// No description provided for @roomSync_statusConnectedStale.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected, stale'**
+  String get roomSync_statusConnectedStale;
+
+  /// No description provided for @roomSync_statusConnectedSynced.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected, synced'**
+  String get roomSync_statusConnectedSynced;
+
+  /// No description provided for @roomSync_statusNotLoggedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Not logged in'**
+  String get roomSync_statusNotLoggedIn;
+
+  /// No description provided for @roomSync_statusNotSynced.
+  ///
+  /// In en, this message translates to:
+  /// **'Not synced'**
+  String get roomSync_statusNotSynced;
+
   /// No description provided for @notification_activityTitle.
   ///
   /// In en, this message translates to:
@@ -5368,18 +5275,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'meshcore-open GPX map data export'**
   String get settings_gpxExportShareSubject;
-
-  /// No description provided for @snrIndicator_nearByRepeaters.
-  ///
-  /// In en, this message translates to:
-  /// **'Nearby Repeaters'**
-  String get snrIndicator_nearByRepeaters;
-
-  /// No description provided for @snrIndicator_lastSeen.
-  ///
-  /// In en, this message translates to:
-  /// **'Last seen'**
-  String get snrIndicator_lastSeen;
 }
 
 class _AppLocalizationsDelegate

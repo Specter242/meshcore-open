@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/scheduler.dart';
 import '../connector/meshcore_protocol.dart';
 
 class BleDebugLogEntry {
@@ -45,7 +44,6 @@ class BleDebugLogService extends ChangeNotifier {
   static const int maxEntries = 500;
   final List<BleDebugLogEntry> _entries = [];
   final List<BleRawLogRxEntry> _rawLogRxEntries = [];
-  bool _notifyScheduled = false;
 
   List<BleDebugLogEntry> get entries => List.unmodifiable(_entries);
   List<BleRawLogRxEntry> get rawLogRxEntries =>
@@ -80,31 +78,13 @@ class BleDebugLogService extends ChangeNotifier {
       }
     }
 
-    _notifyListenersSafely();
+    notifyListeners();
   }
 
   void clear() {
     _entries.clear();
     _rawLogRxEntries.clear();
-    _notifyListenersSafely();
-  }
-
-  void _notifyListenersSafely() {
-    final phase = SchedulerBinding.instance.schedulerPhase;
-    final canNotifyNow =
-        phase == SchedulerPhase.idle ||
-        phase == SchedulerPhase.postFrameCallbacks;
-    if (canNotifyNow) {
-      notifyListeners();
-      return;
-    }
-
-    if (_notifyScheduled) return;
-    _notifyScheduled = true;
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      _notifyScheduled = false;
-      notifyListeners();
-    });
+    notifyListeners();
   }
 
   String _describeFrame(

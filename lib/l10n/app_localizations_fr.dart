@@ -138,20 +138,28 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String scanner_reconnecting(String deviceName) {
+    return 'Reconnecting to $deviceName...';
+  }
+
+  @override
+  String scanner_waitingForDevice(String deviceName) {
+    return 'Waiting for $deviceName...';
+  }
+
+  @override
+  String scanner_lostConnection(String deviceName) {
+    return 'Lost connection to $deviceName';
+  }
+
+  @override
+  String get scanner_reconnect => 'Reconnect';
+
+  @override
   String get scanner_stop => 'Arrêter';
 
   @override
   String get scanner_scan => 'Scanner';
-
-  @override
-  String get scanner_bluetoothOff => 'Le Bluetooth est désactivé.';
-
-  @override
-  String get scanner_bluetoothOffMessage =>
-      'Veuillez activer le Bluetooth pour rechercher des appareils.';
-
-  @override
-  String get scanner_enableBluetooth => 'Activer le Bluetooth';
 
   @override
   String get device_quickSwitch => 'Basculement rapide';
@@ -325,10 +333,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Un client Flutter open source pour les appareils de réseau mesh MeshCore LoRa.';
 
   @override
-  String get settings_aboutOpenMeteoAttribution =>
-      'Données d\'élévation LOS : Open-Meteo (CC BY 4.0)';
-
-  @override
   String get settings_infoName => 'Nom';
 
   @override
@@ -351,6 +355,15 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settings_presets => 'Préréglages';
+
+  @override
+  String get settings_preset915Mhz => '915 MHz';
+
+  @override
+  String get settings_preset868Mhz => '868 MHz';
+
+  @override
+  String get settings_preset433Mhz => '433 MHz';
 
   @override
   String get settings_frequency => 'Fréquence (MHz)';
@@ -380,15 +393,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settings_txPowerInvalid => 'Puissance TX invalide (0-22 dBm)';
 
   @override
-  String get settings_clientRepeat => 'Répétition hors réseau';
+  String get settings_longRange => 'Portée Longue';
 
   @override
-  String get settings_clientRepeatSubtitle =>
-      'Permettez à cet appareil de répéter les paquets de données pour les autres.';
-
-  @override
-  String get settings_clientRepeatFreqWarning =>
-      'Pour les transmissions hors réseau, il est nécessaire d\'utiliser les fréquences de 433, 869 ou 918 MHz.';
+  String get settings_fastSpeed => 'Vitesse Rapide';
 
   @override
   String settings_error(String message) {
@@ -465,14 +473,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get appSettings_languageUk => 'Ukrainien';
 
   @override
-  String get appSettings_enableMessageTracing =>
-      'Activer le traçage des messages';
-
-  @override
-  String get appSettings_enableMessageTracingSubtitle =>
-      'Afficher les métadonnées détaillées de routage et de synchronisation des messages';
-
-  @override
   String get appSettings_notifications => 'Notifications';
 
   @override
@@ -514,6 +514,22 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get appSettings_advertisementNotificationsSubtitle =>
       'Afficher une notification lors de la découverte de nouveaux nœuds';
+
+  @override
+  String get appSettings_connection => 'Connection';
+
+  @override
+  String get appSettings_autoReconnect => 'Automatically reconnect';
+
+  @override
+  String get appSettings_autoReconnectSubtitle =>
+      'Keep trying to reach your companion when Bluetooth connection is lost, including after extended time out of range.';
+
+  @override
+  String get appSettings_autoReconnectEnabled => 'Auto-reconnect enabled';
+
+  @override
+  String get appSettings_autoReconnectDisabled => 'Auto-reconnect disabled';
 
   @override
   String get appSettings_messaging => 'Messagerie';
@@ -635,15 +651,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get appSettings_offlineMapCache => 'Cache de Carte Hors Ligne';
 
   @override
-  String get appSettings_unitsTitle => 'Unités';
-
-  @override
-  String get appSettings_unitsMetric => 'Métrique (m/km)';
-
-  @override
-  String get appSettings_unitsImperial => 'Impérial (ft / mi)';
-
-  @override
   String get appSettings_noAreaSelected => 'Aucune zone sélectionnée';
 
   @override
@@ -671,6 +678,51 @@ class AppLocalizationsFr extends AppLocalizations {
       'Le débogage de l\'application est désactivé.';
 
   @override
+  String get appSettings_roomSyncTitle => 'Room Sync';
+
+  @override
+  String get appSettings_roomSyncEnableTitle => 'Enable room auto-sync';
+
+  @override
+  String get appSettings_roomSyncEnableSubtitle =>
+      'Automatically keep room-server backlog synced while connected.';
+
+  @override
+  String get appSettings_roomSyncAutoLoginTitle =>
+      'Auto-login saved room sessions';
+
+  @override
+  String get appSettings_roomSyncAutoLoginSubtitle =>
+      'On reconnect, login to room servers with saved passwords.';
+
+  @override
+  String get appSettings_roomSyncBaseIntervalTitle => 'Base sync interval';
+
+  @override
+  String get appSettings_roomSyncBaseIntervalDialog =>
+      'Base sync interval (seconds)';
+
+  @override
+  String get appSettings_roomSyncMaxBackoffTitle => 'Max backoff interval';
+
+  @override
+  String get appSettings_roomSyncMaxBackoffDialog =>
+      'Max backoff interval (seconds)';
+
+  @override
+  String get appSettings_roomSyncTimeoutTitle => 'Sync timeout';
+
+  @override
+  String get appSettings_roomSyncTimeoutDialog => 'Sync timeout (seconds)';
+
+  @override
+  String get appSettings_roomSyncStaleAfterTitle => 'Mark room stale after';
+
+  @override
+  String get appSettings_roomSyncStaleAfterDialog =>
+      'Stale threshold (minutes)';
+
+  @override
   String get contacts_title => 'Contacts';
 
   @override
@@ -681,35 +733,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les contacts apparaîtront lorsque les appareils font leur annonce.';
 
   @override
-  String get contacts_unread => 'Non lu';
-
-  @override
-  String get contacts_searchContactsNoNumber => 'Rechercher des contacts...';
-
-  @override
-  String contacts_searchContacts(int number, String str) {
-    return 'Rechercher des contacts...';
-  }
-
-  @override
-  String contacts_searchFavorites(int number, String str) {
-    return 'Rechercher $number$str Favoris...';
-  }
-
-  @override
-  String contacts_searchUsers(int number, String str) {
-    return 'Rechercher $number$str utilisateurs...';
-  }
-
-  @override
-  String contacts_searchRepeaters(int number, String str) {
-    return 'Rechercher $number$str Répéteurs...';
-  }
-
-  @override
-  String contacts_searchRoomServers(int number, String str) {
-    return 'Rechercher $number$str serveurs de salle...';
-  }
+  String get contacts_searchContacts => 'Rechercher des contacts...';
 
   @override
   String get contacts_noUnreadContacts => 'Aucun contact non lu';
@@ -732,7 +756,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get contacts_manageRoom => 'Gérer le Room Server';
 
   @override
-  String get contacts_roomLogin => 'Connexion Room Server';
+  String get contacts_roomLogin => 'Connexion Salle';
+
+  @override
+  String get contacts_roomAutoSyncTitle => 'Auto-sync this room';
+
+  @override
+  String get contacts_roomAutoSyncSubtitle =>
+      'Enable automatic login and background catch-up sync for this room.';
 
   @override
   String get contacts_openChat => 'Ouverture du Chat';
@@ -835,22 +866,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get channels_editChannel => 'Modifier le canal';
 
   @override
-  String get channels_muteChannel => 'Désactiver les notifications du canal';
-
-  @override
-  String get channels_unmuteChannel => 'Réactiver les notifications du canal';
-
-  @override
   String get channels_deleteChannel => 'Supprimer le canal';
 
   @override
   String channels_deleteChannelConfirm(String name) {
     return 'Supprimer $name? Cela ne peut pas être annulé.';
-  }
-
-  @override
-  String channels_channelDeleteFailed(String name) {
-    return 'Échec de la suppression de la chaîne \"$name\"';
   }
 
   @override
@@ -1143,9 +1163,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get chat_pathManagement => 'Gestion des chemins';
 
   @override
-  String get chat_ShowAllPaths => 'Afficher tous les chemins';
-
-  @override
   String get chat_routingMode => 'Mode de routage';
 
   @override
@@ -1307,12 +1324,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get map_title => 'Carte des nœuds';
 
   @override
-  String get map_lineOfSight => 'Ligne de vue';
-
-  @override
-  String get map_losScreenTitle => 'Ligne de vue';
-
-  @override
   String get map_noNodesWithLocation =>
       'Aucun nœud avec des données de localisation';
 
@@ -1441,19 +1452,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get map_manageRepeater => 'Gérer le répéteur';
-
-  @override
-  String get map_tapToAdd =>
-      'Appuyez sur les nœuds pour les ajouter au chemin.';
-
-  @override
-  String get map_runTrace => 'Exécuter la traçage de chemin';
-
-  @override
-  String get map_removeLast => 'Supprimer le dernier';
-
-  @override
-  String get map_pathTraceCancelled => 'Traçage de chemin annulé';
 
   @override
   String get mapCache_title => 'Cache de Carte Hors Ligne';
@@ -1600,7 +1598,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get login_repeaterLogin => 'Connexion au répéteur';
 
   @override
-  String get login_roomLogin => 'Connexion Room Server';
+  String get login_roomLogin => 'Connexion Salle';
 
   @override
   String get login_password => 'Mot de passe';
@@ -1725,7 +1723,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get repeater_management => 'Gestion des répéteurs';
 
   @override
-  String get room_management => 'Administrattion Room Server';
+  String get room_management => 'Administración del Servidor de Habitación';
 
   @override
   String get repeater_managementTools => 'Outils de Gestion';
@@ -1751,10 +1749,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get repeater_cliSubtitle => 'Envoyer des commandes au répéteur';
 
   @override
-  String get repeater_neighbors => 'Voisins';
+  String get repeater_neighbours => 'Voisins';
 
   @override
-  String get repeater_neighborsSubtitle => 'Afficher les voisins de saut nuls.';
+  String get repeater_neighboursSubtitle =>
+      'Afficher les voisins de saut nuls.';
 
   @override
   String get repeater_settings => 'Paramètres';
@@ -1910,6 +1909,40 @@ class AppLocalizationsFr extends AppLocalizations {
   String get repeater_txPowerHelper => '1-30 dBm';
 
   @override
+  String get repeater_advancedSettings => 'Advanced Settings';
+
+  @override
+  String get repeater_interferenceThreshold => 'Interference Threshold';
+
+  @override
+  String get repeater_interferenceThresholdHelper =>
+      'dB threshold (default 14). Set 0 to disable channel interference detection.';
+
+  @override
+  String get repeater_agcResetInterval => 'AGC Reset Interval';
+
+  @override
+  String get repeater_agcResetIntervalHelper =>
+      'Seconds between AGC resets. Set 0 to disable.';
+
+  @override
+  String get repeater_floodMaxHops => 'Flood Max Hops';
+
+  @override
+  String get repeater_floodMaxHopsHelper =>
+      'Maximum hops for forwarding inbound flood packets.';
+
+  @override
+  String get repeater_multiAcks => 'Multi ACKs';
+
+  @override
+  String get repeater_multiAcksHelper =>
+      'Enable double ACK behavior (0 or 1 in firmware).';
+
+  @override
+  String get repeater_hopsShort => 'hops';
+
+  @override
   String get repeater_bandwidth => 'Bande passante';
 
   @override
@@ -2052,6 +2085,22 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get repeater_refreshRadioSettings => 'Rafraîchir les paramètres Radio';
+
+  @override
+  String get repeater_refreshAdvancedSettings => 'Refresh Advanced Settings';
+
+  @override
+  String get repeater_refreshInterferenceThreshold =>
+      'Refresh interference threshold';
+
+  @override
+  String get repeater_refreshAgcResetInterval => 'Refresh AGC reset interval';
+
+  @override
+  String get repeater_refreshFloodMaxHops => 'Refresh flood max hops';
+
+  @override
+  String get repeater_refreshMultiAcks => 'Refresh multi ACKs';
 
   @override
   String get repeater_refreshTxPower => 'Rafraîchir la tension TX';
@@ -2459,7 +2508,7 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get neighbors_repeatersNeighbors => 'Répéteurs Voisins';
+  String get neighbors_repeatersNeighbours => 'Répéteurs Voisins';
 
   @override
   String get neighbors_noData =>
@@ -2771,13 +2820,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get listFilter_all => 'Tout';
 
   @override
-  String get listFilter_favorites => 'Préférences';
-
-  @override
-  String get listFilter_addToFavorites => 'Ajouter à mes favoris';
-
-  @override
-  String get listFilter_removeFromFavorites => 'Supprimer des favoris';
+  String get listFilter_favorites => 'Favorites';
 
   @override
   String get listFilter_users => 'Utilisateurs';
@@ -2809,148 +2852,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get pathTrace_someHopsNoLocation =>
       'Un ou plusieurs des sauts manquent d\'une localisation !';
-
-  @override
-  String get pathTrace_clearTooltip => 'Effacer le chemin';
-
-  @override
-  String get losSelectStartEnd =>
-      'Sélectionnez les nœuds de début et de fin pour LOS.';
-
-  @override
-  String losRunFailed(String error) {
-    return 'Échec de la vérification de la ligne de vue : $error';
-  }
-
-  @override
-  String get losClearAllPoints => 'Effacer tous les points';
-
-  @override
-  String get losRunToViewElevationProfile =>
-      'Exécutez LOS pour afficher le profil d\'altitude';
-
-  @override
-  String get losMenuTitle => 'Menu LOS';
-
-  @override
-  String get losMenuSubtitle =>
-      'Appuyez sur les nœuds ou appuyez longuement sur la carte pour des points personnalisés';
-
-  @override
-  String get losShowDisplayNodes => 'Afficher les nœuds d\'affichage';
-
-  @override
-  String get losCustomPoints => 'Points personnalisés';
-
-  @override
-  String losCustomPointLabel(int index) {
-    return 'Personnalisé $index';
-  }
-
-  @override
-  String get losPointA => 'Point A';
-
-  @override
-  String get losPointB => 'Point B';
-
-  @override
-  String losAntennaA(String value, String unit) {
-    return 'Antenne A : $value $unit';
-  }
-
-  @override
-  String losAntennaB(String value, String unit) {
-    return 'Antenne B : $value $unit';
-  }
-
-  @override
-  String get losRun => 'Exécuter la LOS';
-
-  @override
-  String get losNoElevationData => 'Aucune donnée d\'altitude';
-
-  @override
-  String losProfileClear(
-    String distance,
-    String distanceUnit,
-    String clearance,
-    String heightUnit,
-  ) {
-    return '$distance $distanceUnit, LOS clair, clairance minimale $clearance $heightUnit';
-  }
-
-  @override
-  String losProfileBlocked(
-    String distance,
-    String distanceUnit,
-    String obstruction,
-    String heightUnit,
-  ) {
-    return '$distance $distanceUnit, bloqué par $obstruction $heightUnit';
-  }
-
-  @override
-  String get losStatusChecking => 'LOS : vérification...';
-
-  @override
-  String get losStatusNoData => 'LOS : aucune donnée';
-
-  @override
-  String losStatusSummary(int clear, int total, int blocked, int unknown) {
-    return 'LOS : $clear/$total clair, $blocked bloqué, $unknown inconnu';
-  }
-
-  @override
-  String get losErrorElevationUnavailable =>
-      'Données d\'altitude indisponibles pour un ou plusieurs échantillons.';
-
-  @override
-  String get losErrorInvalidInput =>
-      'Données de points/d\'altitude non valides pour le calcul de la LOS.';
-
-  @override
-  String get losRenameCustomPoint => 'Renommer le point personnalisé';
-
-  @override
-  String get losPointName => 'Nom du point';
-
-  @override
-  String get losShowPanelTooltip => 'Afficher le panneau LOS';
-
-  @override
-  String get losHidePanelTooltip => 'Masquer le panneau LOS';
-
-  @override
-  String get losElevationAttribution =>
-      'Données d’altitude : Open-Meteo (CC BY 4.0)';
-
-  @override
-  String get losLegendRadioHorizon => 'Horizon radio';
-
-  @override
-  String get losLegendLosBeam => 'Ligne de visée';
-
-  @override
-  String get losLegendTerrain => 'Terrain';
-
-  @override
-  String get losFrequencyLabel => 'Fréquence';
-
-  @override
-  String get losFrequencyInfoTooltip => 'Voir les détails du calcul';
-
-  @override
-  String get losFrequencyDialogTitle => 'Calcul de l’horizon radio';
-
-  @override
-  String losFrequencyDialogDescription(
-    double baselineK,
-    double baselineFreq,
-    double frequencyMHz,
-    double kFactor,
-  ) {
-    return 'À partir de k=$baselineK à $baselineFreq MHz, le calcul ajuste le facteur k pour la bande actuelle de $frequencyMHz MHz, ce qui définit la limite incurvée de l\'horizon radio.';
-  }
 
   @override
   String get contacts_pathTrace => 'Traçage de chemin';
@@ -3028,6 +2929,30 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get contacts_contactAdvertCopyFailed =>
       'La copie de l\'annonce vers le presse-papiers a échoué.';
+
+  @override
+  String get roomSync_statusOff => 'Room sync off';
+
+  @override
+  String get roomSync_statusDisabled => 'Sync disabled';
+
+  @override
+  String get roomSync_statusSyncing => 'Syncing...';
+
+  @override
+  String get roomSync_statusConnectedWaiting => 'Connected, waiting sync';
+
+  @override
+  String get roomSync_statusConnectedStale => 'Connected, stale';
+
+  @override
+  String get roomSync_statusConnectedSynced => 'Connected, synced';
+
+  @override
+  String get roomSync_statusNotLoggedIn => 'Not logged in';
+
+  @override
+  String get roomSync_statusNotSynced => 'Not synced';
 
   @override
   String get notification_activityTitle => 'Activité MeshCore';
@@ -3129,10 +3054,4 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get settings_gpxExportShareSubject =>
       'meshcore-open exporter les données de carte GPX';
-
-  @override
-  String get snrIndicator_nearByRepeaters => 'Répéteurs à proximité';
-
-  @override
-  String get snrIndicator_lastSeen => 'Dernière fois vu';
 }
