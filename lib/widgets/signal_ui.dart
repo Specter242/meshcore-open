@@ -11,7 +11,7 @@ SignalUi signalUiForStrengthTier(int tier) {
   switch (tier) {
     case 0:
       return const SignalUi(
-        icon: Icons.signal_cellular_4_bar,
+        icon: Icons.signal_cellular_alt,
         color: Colors.green,
       );
     case 1:
